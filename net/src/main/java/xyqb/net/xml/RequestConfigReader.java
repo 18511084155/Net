@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import android.content.res.Resources;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +24,7 @@ import xyqb.xml.XmlHelper;
  * Created by cz on 8/23/16.
  */
 public class RequestConfigReader {
+    private static final String TAG = "RequestConfigReader";
     private final RequestConfig requestConfig;
     private  XmlElement cacheElement;
     private Context appContext;
@@ -81,7 +83,7 @@ public class RequestConfigReader {
                 Class<RequestItem> clazz = RequestItem.class;
                 for(XmlAttribute attribute:attributes){
                     String value = attribute.value;
-                    if("param".equals(attribute.name)){
+                    if("params".equals(attribute.name)){
                         requestItem.param =value.split("&");
                     } else if("files".equals(attribute.name)){
                         requestItem.files=value.split("&");
@@ -92,6 +94,7 @@ public class RequestConfigReader {
                         } catch (NoSuchFieldException e) {
                             e.printStackTrace();
                         } catch (IllegalAccessException e) {
+                            Log.e(TAG,"name:"+attribute.name+" value:"+value);
                             e.printStackTrace();
                         }
                     }

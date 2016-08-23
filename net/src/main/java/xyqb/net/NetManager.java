@@ -13,6 +13,8 @@ import xyqb.net.xml.RequestConfigReader;
  * Created by cz on 8/23/16.
  */
 public class NetManager {
+    private final int MAX_TIME_OUT=8*1000;
+    private final int MAX_CACHE_SIZE=4*1024*1024;
     private static NetManager instance=new NetManager();
     private final RequestConfig requestConfig;
     private final RequestConfigReader configReader;
@@ -22,6 +24,10 @@ public class NetManager {
     private NetManager(){
         cacheItems =new HashMap<>();
         requestConfig =new RequestConfig();
+        requestConfig.connectTimeout=MAX_TIME_OUT;
+        requestConfig.writeTimeout=MAX_TIME_OUT;
+        requestConfig.readTimeout=MAX_TIME_OUT;
+        requestConfig.maxCacheSize=MAX_CACHE_SIZE;
         configReader=new RequestConfigReader(requestConfig);
     }
 
@@ -97,7 +103,6 @@ public class NetManager {
         }
         return cacheItems.get(action);
     }
-
 
     public RequestConfig getRequestConfig(){
         return requestConfig;

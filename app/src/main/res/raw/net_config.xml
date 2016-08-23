@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<net>
+    <item action="column_list" info="栏目列表" params="ut" url="/v1/article/column/get.json?" />
+    <item action="subscribe_category" info="订阅分栏" url="/v1/account/category/list.json?" />
+</net>

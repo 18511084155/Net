@@ -22,6 +22,6 @@ public class RequestConfig {
     public OnRequestListener listener;
     public OnRequestResultListener requestResultListener;
 
-
-
+    public RequestConfig() {
+    }
 }
