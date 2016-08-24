@@ -14,6 +14,7 @@ public class RequestItem {
     public String info;
     public String[] param;// 请求参数
     public HashMap<String,String> params;
+    public String dynamicUrl;//动态的服务器域名
     public String url;// 请求url前缀
     public boolean filter;//非空过滤
     public boolean extras;//添加附加数据,部分接口不需要.例授权

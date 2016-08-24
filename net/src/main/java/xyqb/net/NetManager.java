@@ -1,8 +1,15 @@
 package xyqb.net;
 
+import android.text.TextUtils;
+
 import java.io.File;
 import java.util.HashMap;
 
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 import xyqb.net.callback.OnRequestListener;
 import xyqb.net.callback.OnRequestResultListener;
 import xyqb.net.model.RequestConfig;
@@ -97,11 +104,33 @@ public class NetManager {
         return this;
     }
 
-    public RequestItem getRequestItem(String action){
+    public synchronized void requestItem(final String action,final Action1<RequestItem> callAction){
+        if(null==callAction||TextUtils.isEmpty(action)) return;
         if(cacheItems.isEmpty()){
-            cacheItems.putAll(configReader.readerRequestItems());
+            Observable.create(new Observable.OnSubscribe<HashMap<String, RequestItem>>() {
+                @Override
+                public void call(Subscriber<? super HashMap<String, RequestItem>> subscriber) {
+                    HashMap<String, RequestItem> items = configReader.readerRequestItems();
+                    if(null!=items){
+                        cacheItems.putAll(items);
+                        subscriber.onNext(items);
+                    }
+                }
+            }).observeOn(AndroidSchedulers.mainThread()).subscribeOn(Schedulers.io()).subscribe(new Action1<HashMap<String, RequestItem>>() {
+                @Override
+                public void call(HashMap<String, RequestItem> items) {
+                    //main
+                    callAction.call(cacheItems.get(action));
+                }
+            }, new Action1<Throwable>() {
+                @Override
+                public void call(Throwable throwable) {
+                    throwable.printStackTrace();
+                }
+            });
+        } else {
+            callAction.call(cacheItems.get(action));
         }
-        return cacheItems.get(action);
     }
 
     public RequestConfig getRequestConfig(){

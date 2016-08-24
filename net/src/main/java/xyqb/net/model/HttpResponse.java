@@ -6,9 +6,8 @@ import java.util.Map;
 /**
  * Created by cz on 8/23/16.
  */
-public class HttpResponse<T> {
+public class HttpResponse {
     public String result;
-    public T value;
     public Map<String,String> headers;
 
     public HttpResponse() {

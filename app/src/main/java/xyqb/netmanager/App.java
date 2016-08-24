@@ -2,10 +2,7 @@ package xyqb.netmanager;
 
 import android.app.Application;
 
-import java.util.HashMap;
-
 import xyqb.net.NetManager;
-import xyqb.net.callback.OnRequestListener;
 import xyqb.netmanager.listener.RequestListener;
 
 /**

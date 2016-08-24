@@ -2,17 +2,20 @@ package xyqb.netmanager;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
+
+import java.util.HashMap;
 
 import xyqb.net.HttpRequest;
 import xyqb.net.callback.OnRequestFailedListener;
 import xyqb.net.callback.OnRequestSuccessListener;
 import xyqb.net.exception.HttpException;
 import xyqb.net.model.HttpResponse;
+import xyqb.net.resultfilter.JsonParamsResultFilter;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -22,19 +25,24 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final TextView content= (TextView) findViewById(R.id.tv_content);
         findViewById(R.id.btn_request).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                HttpRequest.request(NetConfig.COLUMN_LIST,System.currentTimeMillis()).
-                        setOnRequestSuccessListener(new OnRequestSuccessListener() {
+                content.setText(null);
+                HttpRequest.obtain(NetConfig.COLUMN_LIST, System.currentTimeMillis()).
+                        setResultFilter(new JsonParamsResultFilter()).
+                        setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
+                            @Override
+                            public void onSuccess(HttpResponse result, HashMap<String, String> params) {
+                                Log.e(TAG,result.result);
+                                content.setText(result.result);
+                            }
+                        }).setOnRequestFailedListener(new OnRequestFailedListener() {
                     @Override
-                    public void onSuccess(HttpResponse result) {
-                        Log.e(TAG,result.result);
-                    }
-                }).setOnRequestFailedListener(new OnRequestFailedListener() {
-                    @Override
-                    public void onFailed(HttpException e) {
+                    public void onFailed(int code, HttpException e) {
                         Log.e(TAG,e.getMessage());
+                        content.setText(e.getMessage());
                     }
                 }).call(null);
             }

@@ -15,4 +15,9 @@ public class HttpException extends Exception {
     public HttpException() {
         this.headers=new HashMap<>();
     }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
 }

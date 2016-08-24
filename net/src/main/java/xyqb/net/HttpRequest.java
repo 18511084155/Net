@@ -1,9 +1,11 @@
 package xyqb.net;
 
 import android.text.TextUtils;
+import android.util.Pair;
 
 import rx.Observable;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import xyqb.net.callback.OnRequestFailedListener;
 import xyqb.net.callback.OnRequestSuccessListener;
 import xyqb.net.exception.HttpException;
@@ -15,28 +17,30 @@ import xyqb.net.resultfilter.ResultFilter;
 /**
  * Created by cz on 8/23/16.
  */
-public class HttpRequest {
+public class HttpRequest<T> {
     private static final IRequest requester =new OKHttp3();
     private OnRequestSuccessListener successListener;
     private OnRequestFailedListener failedListener;
+    private ResultFilter<T> requestFilter;
     private RequestItem requestItem;
+    private String action;
     private Object[] params;
 
-    public static HttpRequest call(){
-        return new HttpRequest();
+
+    public static HttpRequest obtain(String action,final Object...params){
+        HttpRequest httpRequest = new HttpRequest(params);
+        httpRequest.action=action;
+        return httpRequest;
     }
 
-    public static HttpRequest request(String action,Object...params){
-        HttpRequest httpRequest = new HttpRequest(params);
-        httpRequest.requestItem = NetManager.getInstance().getRequestItem(action);
-        if(null==httpRequest.requestItem){
-            throw new NullPointerException("No config action info!");
-        }
-        return httpRequest;
+    public HttpRequest url(String url){
+        requestItem.dynamicUrl=url;
+        return this;
     }
 
     private HttpRequest(Object... params){
         this.params=params;
+        requestItem=new RequestItem();
     }
 
     public HttpRequest addHeader(String name,String value){
@@ -44,7 +48,7 @@ public class HttpRequest {
         return this;
     }
 
-    public HttpRequest setOnRequestSuccessListener(OnRequestSuccessListener listener){
+    public HttpRequest setOnRequestSuccessListener(OnRequestSuccessListener<T> listener){
         this.successListener=listener;
         return this;
     }
@@ -54,35 +58,74 @@ public class HttpRequest {
         return this;
     }
 
-    public void setResult(ResultFilter resultFilter){
-        this.requester.setResultFilter(resultFilter);
+    public HttpRequest setResultFilter(ResultFilter<T> resultFilter){
+        this.requestFilter=resultFilter;
+        return this;
     }
 
 
     public void call(Object obj){
-        ensureRequestItem();
-        Observable<HttpResponse> observable = requester.call(obj, requestItem, params);
-        observable.subscribe(new Action1<HttpResponse>() {
+        final String tag=(null==obj?null:obj.getClass().getSimpleName());
+        if(!TextUtils.isEmpty(action)){
+            NetManager.getInstance().requestItem(action, new Action1<RequestItem>() {
+                @Override
+                public void call(RequestItem item) {
+                    item.dynamicUrl = requestItem.dynamicUrl;
+                    item.headers = requestItem.headers;
+                    requestItem = item;
+                    request(tag);
+                }
+            });
+        } else {
+            request(tag);
+        }
+    }
+
+    private void request(String tag) {
+        ensureRequestItem(requestItem);
+        Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
+        observable.map(new Func1<HttpResponse,Pair<HttpResponse,T>>() {
             @Override
-            public void call(HttpResponse response) {
+            public Pair<HttpResponse, T> call(HttpResponse response) {
+                T t;
+                if(null!=HttpRequest.this.requestFilter){
+                    t = HttpRequest.this.requestFilter.result(response.result);
+                } else {
+                    t= (T) response.result;
+                }
+                return new Pair<>(response,t);
+            }
+        }).subscribe(new Action1<Pair<HttpResponse, T>>() {
+            @Override
+            public void call(Pair<HttpResponse, T> pair) {
                 if (null != successListener) {
-                    successListener.onSuccess(response);
+                    successListener.onSuccess(pair.first, pair.second);
                 }
             }
         }, new Action1<Throwable>() {
             @Override
             public void call(Throwable throwable) {
-                if (null != failedListener&&throwable instanceof HttpException) {
-                    failedListener.onFailed((HttpException) throwable);
+                if (null != failedListener) {
+                    HttpException exception;
+                    if (throwable instanceof HttpException) {
+                        exception=(HttpException)throwable;
+                    } else {
+                        exception=new HttpException();
+                        exception.message=throwable.getMessage();
+                        exception.code=IRequest.REQUEST_ERROR;
+                    }
+                    failedListener.onFailed(exception.code, exception);
                 }
             }
         });
     }
 
-    private void ensureRequestItem(){
-        if(TextUtils.isEmpty(requestItem.url)){
+    private void ensureRequestItem(RequestItem item){
+        if(null==item){
+            throw new NullPointerException("request item is null!");
+        } else if(TextUtils.isEmpty(item.url)){
             throw new NullPointerException("request url is null!");
-        } else if("get".equals(requestItem.method)&&"post".equals(requestItem.method)){
+        } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)){
             throw new IllegalArgumentException("http request method error,not get or post!");
         }
     }

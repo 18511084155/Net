@@ -1,6 +1,6 @@
 package xyqb.net.impl;
 
-import android.util.Log;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -23,9 +23,7 @@ import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -37,15 +35,13 @@ import xyqb.net.model.HttpResponse;
 import xyqb.net.model.RequestConfig;
 import xyqb.net.model.RequestItem;
 import xyqb.net.resultfilter.JsonParamsResultFilter;
-import xyqb.net.resultfilter.ResultFilter;
 
 /**
  * Created by cz on 8/23/16.
  */
-public class OKHttp3<T> implements IRequest<T> {
+public class OKHttp3 implements IRequest {
     private static final OkHttpClient httpClient;
     private static final RequestConfig requestConfig;
-    private ResultFilter<T> resultFilter;
 
     static {
         requestConfig = NetManager.getInstance().getRequestConfig();
@@ -53,8 +49,10 @@ public class OKHttp3<T> implements IRequest<T> {
                 .connectTimeout(requestConfig.connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(requestConfig.readTimeout, TimeUnit.SECONDS)
                 .writeTimeout(requestConfig.writeTimeout, TimeUnit.SECONDS)
-//                .cache(new Cache(requestConfig.cachedFile, requestConfig.maxCacheSize))
                 .retryOnConnectionFailure(requestConfig.retryOnConnectionFailure);
+        if(null!=requestConfig.cachedFile){
+            clientBuilder.cache(new Cache(requestConfig.cachedFile, requestConfig.maxCacheSize));
+        }
         httpClient=clientBuilder.build();
     }
     public OKHttp3() {
@@ -92,7 +90,7 @@ public class OKHttp3<T> implements IRequest<T> {
 
 
     @Override
-    public Observable<HttpResponse> call(Object obj,final RequestItem item,final Object... values) {
+    public Observable<HttpResponse> call(String tag,final RequestItem item,final Object... values) {
         final HashMap<String,String> params=new HashMap<>();
         int length=Math.min(null==item.param?0:item.param.length, values.length);
         for(int i=0;i<length;i++){
@@ -101,22 +99,17 @@ public class OKHttp3<T> implements IRequest<T> {
                 params.put(item.param[i],value.toString());
             }
         }
-        return call(obj,item,params);
-    }
-
-    @Override
-    public void setResultFilter(ResultFilter<T> resultFilter) {
-        this.resultFilter=resultFilter;
+        return call(tag,item,params);
     }
 
 
-    public Observable<HttpResponse> call(Object obj,final RequestItem item, final HashMap<String,String> params){
-        final String tag=null==obj?"":obj.getClass().getSimpleName();
+    public Observable<HttpResponse> call(final String tag,final RequestItem item, final HashMap<String,String> params){
+
         return Observable.create(new Observable.OnSubscribe<HttpResponse>() {
             @Override
             public void call(Subscriber<? super HttpResponse> subscriber) {
                 try {
-                    final Request request = getRequest(item, params);
+                    final Request request = getRequest(tag,item, params);
                     final Call call = httpClient.newCall(request);
                     Response response = call.execute();
                     Headers headers = request.headers();
@@ -130,7 +123,6 @@ public class OKHttp3<T> implements IRequest<T> {
                     String result = response.body().string();
                     if (response.isSuccessful()) {
                         httpResponse.result = result;
-                        if (null != resultFilter) httpResponse.value = resultFilter.result(result);
                         subscriber.onNext(httpResponse);
                     }else{
                         //request success but content is fail
@@ -142,12 +134,7 @@ public class OKHttp3<T> implements IRequest<T> {
                         exception.result = result;
                     }
             }
-
-            catch(
-            IOException e
-            )
-
-            {
+            catch(IOException e){
                 //request failed
                 HttpException exception = new HttpException();
                 exception.code = IRequest.REQUEST_ERROR;
@@ -159,7 +146,7 @@ public class OKHttp3<T> implements IRequest<T> {
 
 
 
-    private Request getRequest(RequestItem item,Map<String, String> params){
+    private Request getRequest(String tag,RequestItem item,Map<String, String> params){
         Request request;
         //add extras param
         if(null!=requestConfig&&null!=requestConfig.listener){
@@ -168,7 +155,7 @@ public class OKHttp3<T> implements IRequest<T> {
                 params.putAll(extraItems);
             }
         }
-        String requestUrl = getRequestUrl(item.url);
+        String requestUrl = getRequestUrl(item);
         if(POST.equals(item.method)){
             FormBody.Builder builder = new FormBody.Builder();
             if(null!=params){
@@ -188,6 +175,9 @@ public class OKHttp3<T> implements IRequest<T> {
                     }
                 }
             }
+            if(null!=tag){
+                requestBuilder.tag(tag);
+            }
             request=requestBuilder.build();
         } else {
             StringBuilder fullUrl = new StringBuilder();
@@ -196,7 +186,7 @@ public class OKHttp3<T> implements IRequest<T> {
                 int index=0;
                 int length=params.size();
                 for (Map.Entry<String,String> entry:params.entrySet()) {
-                    fullUrl.append(entry.getKey()+"="+entry.getValue()+(index++==length-1?"":"&"));
+                    fullUrl.append(entry.getKey() + "=" + entry.getValue() + (index++ == length - 1 ? "" : "&"));
                 }
             }
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
@@ -209,15 +199,22 @@ public class OKHttp3<T> implements IRequest<T> {
                     }
                 }
             }
+            if(null!=tag){
+                requestBuilder.tag(tag);
+            }
             request=requestBuilder.build();
         }
         return request;
     }
 
-    private String getRequestUrl(String url){
-        String absoluteUrl=url;
-        if(!url.startsWith("http")){
-            absoluteUrl=requestConfig.url+url;
+    private String getRequestUrl(RequestItem item){
+        String absoluteUrl;
+        if(!item.url.startsWith("http")){
+            absoluteUrl=requestConfig.url+item.url;
+        } else if(!TextUtils.isEmpty(item.dynamicUrl)){
+            absoluteUrl=item.dynamicUrl+item.url;
+        } else {
+            absoluteUrl=item.url;
         }
         return absoluteUrl;
     }
