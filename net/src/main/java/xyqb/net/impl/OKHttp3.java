@@ -166,18 +166,8 @@ public class OKHttp3 implements IRequest {
             Request.Builder requestBuilder = new Request.Builder()
                     .url(requestUrl)
                     .post(builder.build());
-            //add global header items
-            if(null!=requestConfig&&null!=requestConfig.listener){
-                HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
-                if(null!=headerItems){
-                    for(Map.Entry<String,String> entry:headerItems.entrySet()){
-                        requestBuilder.addHeader(entry.getKey(),entry.getValue());
-                    }
-                }
-            }
-            if(null!=tag){
-                requestBuilder.tag(tag);
-            }
+            initRequestBuild(tag, item, requestBuilder);
+
             request=requestBuilder.build();
         } else {
             StringBuilder fullUrl = new StringBuilder();
@@ -190,21 +180,31 @@ public class OKHttp3 implements IRequest {
                 }
             }
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
-            //add global header items
-            if(null!=requestConfig&&null!=requestConfig.listener){
-                HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
-                if(null!=headerItems){
-                    for(Map.Entry<String,String> entry:headerItems.entrySet()){
-                        requestBuilder.addHeader(entry.getKey(),entry.getValue());
-                    }
-                }
-            }
-            if(null!=tag){
-                requestBuilder.tag(tag);
-            }
+            initRequestBuild(tag, item, requestBuilder);
             request=requestBuilder.build();
         }
         return request;
+    }
+
+    private void initRequestBuild(String tag, RequestItem item, Request.Builder requestBuilder) {
+        //add global header items
+        if(null!=requestConfig&&null!=requestConfig.listener){
+            HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
+            if(null!=headerItems){
+                for(Map.Entry<String,String> entry:headerItems.entrySet()){
+                    requestBuilder.addHeader(entry.getKey(),entry.getValue());
+                }
+            }
+        }
+        //add custom header items
+        if(null!=item.headers&&!item.headers.isEmpty()){
+            for(Map.Entry<String,String> entry:item.headers.entrySet()){
+                requestBuilder.addHeader(entry.getKey(),entry.getValue());
+            }
+        }
+        if(null!=tag){
+            requestBuilder.tag(tag);
+        }
     }
 
     private String getRequestUrl(RequestItem item){
