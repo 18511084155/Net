@@ -28,6 +28,7 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
+import xyqb.net.HttpLog;
 import xyqb.net.IRequest;
 import xyqb.net.NetManager;
 import xyqb.net.exception.HttpException;
@@ -99,7 +100,7 @@ public class OKHttp3 implements IRequest {
                 params.put(item.param[i],value.toString());
             }
         }
-        return call(tag,item,params);
+        return call(tag, item, params);
     }
 
 
@@ -120,10 +121,15 @@ public class OKHttp3 implements IRequest {
                             httpResponse.headers.put(item, headers.get(item));
                         }
                     }
+                    //url headers
                     String result = response.body().string();
                     if (response.isSuccessful()) {
                         httpResponse.result = result;
                         subscriber.onNext(httpResponse);
+                        if(null!=requestConfig.requestResultListener){
+                            requestConfig.requestResultListener.onSuccess(httpResponse,item,request.url().toString());
+                        }
+                        HttpLog.d("Request success:"+item.info);
                     }else{
                         //request success but content is fail
                         HashMap<String, String> params = new JsonParamsResultFilter().result(result);
@@ -132,13 +138,21 @@ public class OKHttp3 implements IRequest {
                         exception.message = params.get("message");
                         exception.headers = httpResponse.headers;
                         exception.result = result;
+                        if(null!=requestConfig.requestResultListener){
+                            requestConfig.requestResultListener.onFailed(exception, item, request.url().toString());
+                        }
+                        HttpLog.d("Request failed:"+item.info);
                     }
-            }
-            catch(IOException e){
-                //request failed
-                HttpException exception = new HttpException();
-                exception.code = IRequest.REQUEST_ERROR;
-                exception.message = e.getMessage();
+                }
+                catch(IOException e){
+                    //request failed
+                    HttpException exception = new HttpException();
+                    exception.code = IRequest.REQUEST_ERROR;
+                    exception.message = e.getMessage();
+                    if(null!=requestConfig.requestResultListener){
+                        requestConfig.requestResultListener.onFailed(exception,item,item.url);
+                    }
+                    HttpLog.d("Request failed:"+item.info+"\n"+e.getMessage());
                 }
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
@@ -158,11 +172,17 @@ public class OKHttp3 implements IRequest {
         String requestUrl = getRequestUrl(item);
         if(POST.equals(item.method)){
             FormBody.Builder builder = new FormBody.Builder();
+            if(null!=item.pathParams){
+                requestUrl+=item.pathParams+"/";
+            }
+            String formParams=new String();
             if(null!=params){
                 for (Map.Entry<String,String> entry:params.entrySet()) {
+                    formParams+=(entry.getKey()+"="+entry.getValue()+"\n");
                     builder.add(entry.getKey(),entry.getValue());
                 }
             }
+            HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
             Request.Builder requestBuilder = new Request.Builder()
                     .url(requestUrl)
                     .post(builder.build());
@@ -171,7 +191,9 @@ public class OKHttp3 implements IRequest {
             request=requestBuilder.build();
         } else {
             StringBuilder fullUrl = new StringBuilder();
-            fullUrl.append(requestUrl);
+            if(null!=item.pathParams){
+                fullUrl.append(item.pathParams+"/");
+            }
             if(null!=params){
                 int index=0;
                 int length=params.size();
@@ -179,12 +201,14 @@ public class OKHttp3 implements IRequest {
                     fullUrl.append(entry.getKey() + "=" + entry.getValue() + (index++ == length - 1 ? "" : "&"));
                 }
             }
+            HttpLog.d("Get:"+fullUrl.toString());
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
             initRequestBuild(tag, item, requestBuilder);
             request=requestBuilder.build();
         }
         return request;
     }
+
 
     private void initRequestBuild(String tag, RequestItem item, Request.Builder requestBuilder) {
         //add global header items

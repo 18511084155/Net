@@ -8,7 +8,7 @@ import xyqb.net.model.RequestItem;
  */
 public interface OnRequestResultListener {
 
-    void onSuccess(HttpResponse response,RequestItem item);
+    void onSuccess(HttpResponse response,RequestItem item,String url);
 
-    void onFailed(Exception e,RequestItem item);
+    void onFailed(Exception e,RequestItem item,String url);
 }

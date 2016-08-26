@@ -12,7 +12,6 @@ public class RequestConfig {
     public String rawName;
     public String path;
     public String url;
-    public boolean debug;
     public int connectTimeout;
     public int readTimeout;
     public int writeTimeout;

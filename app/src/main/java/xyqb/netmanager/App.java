@@ -15,7 +15,7 @@ public class App extends Application {
         super.onCreate();
         NetManager.getInstance().
                 setRawName("net_config").
-                setRequestUrl("http://www.weixinkd.com").
+                setRequestUrl("http://192.168.192.214:9000/").
                 setOnRequestListener(new RequestListener());
     }
 }

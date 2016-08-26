@@ -48,6 +48,11 @@ public class HttpRequest<T> {
         return this;
     }
 
+    public HttpRequest addPathValue(Object params){
+        requestItem.pathParams=params;
+        return this;
+    }
+
     public HttpRequest setOnRequestSuccessListener(OnRequestSuccessListener<T> listener){
         this.successListener=listener;
         return this;
@@ -70,10 +75,16 @@ public class HttpRequest<T> {
             NetManager.getInstance().requestItem(action, new Action1<RequestItem>() {
                 @Override
                 public void call(RequestItem item) {
-                    item.dynamicUrl = requestItem.dynamicUrl;
-                    item.headers = requestItem.headers;
-                    requestItem = item;
-                    request(tag);
+                    if(null!=item){
+                        item.dynamicUrl = requestItem.dynamicUrl;
+                        item.headers = requestItem.headers;
+                        item.pathParams=requestItem.pathParams;
+                        requestItem = item;
+                        request(tag);
+                        HttpLog.d("Get request item,call:"+action);
+                    } else {
+                        HttpLog.d("Not config action:"+action+",please check!");
+                    }
                 }
             });
         } else {
@@ -90,6 +101,7 @@ public class HttpRequest<T> {
                 T t;
                 if(null!=HttpRequest.this.requestFilter){
                     t = HttpRequest.this.requestFilter.result(response.result);
+                    HttpLog.d("Result filter complete, The object is:"+t);
                 } else {
                     t= (T) response.result;
                 }
@@ -109,10 +121,12 @@ public class HttpRequest<T> {
                     HttpException exception;
                     if (throwable instanceof HttpException) {
                         exception=(HttpException)throwable;
+                        HttpLog.d("Request failed code:"+exception.code+" message:\n"+exception.message);
                     } else {
                         exception=new HttpException();
                         exception.message=throwable.getMessage();
                         exception.code=IRequest.REQUEST_ERROR;
+                        HttpLog.d("Request failed:\n"+exception.getMessage());
                     }
                     failedListener.onFailed(exception.code, exception);
                 }

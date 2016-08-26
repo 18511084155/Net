@@ -30,7 +30,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 content.setText(null);
-                HttpRequest.obtain(NetConfig.COLUMN_LIST, System.currentTimeMillis()).
+                HttpRequest.obtain(NetConfig.HOTEL_DETAIL,"2016-8-22","2016-8-26").
+                        addPathValue(12).
                         setResultFilter(new JsonParamsResultFilter()).
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override

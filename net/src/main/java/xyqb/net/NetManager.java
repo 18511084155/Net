@@ -59,8 +59,8 @@ public class NetManager {
         return this;
     }
 
-    public NetManager setDebug(boolean debug){
-        requestConfig.debug=debug;
+    public NetManager setHttpDebug(boolean debug){
+        HttpLog.setHttpDebug(debug);
         return this;
     }
 
