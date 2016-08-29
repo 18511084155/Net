@@ -14,6 +14,7 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
         NetManager.getInstance().
+                setHttpDebug(true).
                 setRawName("net_config").
                 setRequestUrl("http://192.168.192.214:9000/").
                 setOnRequestListener(new RequestListener());

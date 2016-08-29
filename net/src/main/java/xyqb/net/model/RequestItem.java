@@ -12,7 +12,6 @@ public class RequestItem {
     public String action;// 请求方法
     public String method;// 请求get/post
     public String info;
-    public String[] path;
     public Object pathParams;
     public String[] param;// 请求参数
     public HashMap<String,String> params;

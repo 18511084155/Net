@@ -173,7 +173,7 @@ public class OKHttp3 implements IRequest {
         if(POST.equals(item.method)){
             FormBody.Builder builder = new FormBody.Builder();
             if(null!=item.pathParams){
-                requestUrl+=item.pathParams+"/";
+                requestUrl+=item.pathParams;
             }
             String formParams=new String();
             if(null!=params){
@@ -190,9 +190,9 @@ public class OKHttp3 implements IRequest {
 
             request=requestBuilder.build();
         } else {
-            StringBuilder fullUrl = new StringBuilder();
+            StringBuilder fullUrl = new StringBuilder(getRequestUrl(item));
             if(null!=item.pathParams){
-                fullUrl.append(item.pathParams+"/");
+                fullUrl.append(item.pathParams+"?");
             }
             if(null!=params){
                 int index=0;
