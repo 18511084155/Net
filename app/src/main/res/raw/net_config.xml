@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <net>
-    <item action="hotel_detail" info="酒店详情" method="post" path="hotelId" params="arrivalDate&amp;departureDate" url="api/mall/hotel/hotels/" />
+    <item action="hotel_detail" info="酒店详情" method="post" url="api/mall/%s/%s/path?" />
 </net>

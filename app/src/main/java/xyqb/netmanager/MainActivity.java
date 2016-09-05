@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 content.setText(null);
                 HttpRequest.obtain(NetConfig.HOTEL_DETAIL,"2016-8-22","2016-8-26").
-                        addPathValue(12).
+                        addPathValue(12,"abc").
                         setResultFilter(new JsonParamsResultFilter()).
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override

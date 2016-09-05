@@ -2,6 +2,7 @@ package xyqb.net.impl;
 
 import android.text.TextUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
@@ -19,10 +20,12 @@ import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Cache;
 import okhttp3.Call;
-import okhttp3.FormBody;
 import okhttp3.Headers;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import rx.Observable;
 import rx.Subscriber;
@@ -43,7 +46,8 @@ import xyqb.net.resultfilter.JsonParamsResultFilter;
 public class OKHttp3 implements IRequest {
     private static final OkHttpClient httpClient;
     private static final RequestConfig requestConfig;
-
+    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private static final MediaType STREAM=MediaType.parse("application/octet-stream");
     static {
         requestConfig = NetManager.getInstance().getRequestConfig();
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder()
@@ -171,15 +175,35 @@ public class OKHttp3 implements IRequest {
         }
         String requestUrl = getRequestUrl(item);
         if(POST.equals(item.method)){
-            FormBody.Builder builder = new FormBody.Builder();
+
+            MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
             if(null!=item.pathParams){
-                requestUrl+=item.pathParams;
+                requestUrl=String.format(requestUrl,item.pathParams);
             }
             String formParams=new String();
             if(null!=params){
                 for (Map.Entry<String,String> entry:params.entrySet()) {
                     formParams+=(entry.getKey()+"="+entry.getValue()+"\n");
-                    builder.add(entry.getKey(),entry.getValue());
+                    builder.addFormDataPart(entry.getKey(),entry.getValue());
+                }
+            }
+            if(!item.partBody.isEmpty()){
+                for (Map.Entry<xyqb.net.MediaType,Object> entry:item.partBody.entrySet()) {
+                    xyqb.net.MediaType type = entry.getKey();
+                    Object value = entry.getValue();
+                    if(null!=value){
+                        RequestBody requestBody=null;
+                        if(xyqb.net.MediaType.JSON==type){
+                            requestBody=RequestBody.create(JSON, entry.toString());
+                        } else if(xyqb.net.MediaType.STREAM==type){
+                            if(value instanceof File){
+                                requestBody = RequestBody.create(STREAM, (File)value);
+                            }
+                        }
+                        if(null!=requestBody){
+                            builder.addPart(requestBody);
+                        }
+                    }
                 }
             }
             HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
@@ -190,9 +214,10 @@ public class OKHttp3 implements IRequest {
 
             request=requestBuilder.build();
         } else {
-            StringBuilder fullUrl = new StringBuilder(getRequestUrl(item));
+            StringBuilder fullUrl = new StringBuilder(requestUrl);
             if(null!=item.pathParams){
-                fullUrl.append(item.pathParams+"?");
+                fullUrl.delete(0,fullUrl.length());
+                fullUrl.append(String.format(requestUrl,item.pathParams));
             }
             if(null!=params){
                 int index=0;

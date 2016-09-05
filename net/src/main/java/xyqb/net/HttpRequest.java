@@ -48,8 +48,13 @@ public class HttpRequest<T> {
         return this;
     }
 
-    public HttpRequest addPathValue(Object params){
+    public HttpRequest addPathValue(Object... params){
         requestItem.pathParams=params;
+        return this;
+    }
+
+    public HttpRequest addPart(MediaType type,Object obj){
+        requestItem.partBody.put(type,obj);
         return this;
     }
 
@@ -79,6 +84,7 @@ public class HttpRequest<T> {
                         item.dynamicUrl = requestItem.dynamicUrl;
                         item.headers = requestItem.headers;
                         item.pathParams=requestItem.pathParams;
+                        item.partBody=requestItem.partBody;
                         requestItem = item;
                         request(tag);
                         HttpLog.d("Get request item,call:"+action);
@@ -168,6 +174,11 @@ public class HttpRequest<T> {
 
         public Builder addHeader(String name,String value){
             requestItem.headers.put(name,value);
+            return this;
+        }
+
+        public Builder addPart(MediaType type,Object obj){
+            requestItem.partBody.put(type,obj);
             return this;
         }
 

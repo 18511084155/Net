@@ -2,6 +2,8 @@ package xyqb.net.model;
 
 import java.util.HashMap;
 
+import xyqb.net.MediaType;
+
 /**
  * 网络信息管理对象
  *
@@ -12,8 +14,9 @@ public class RequestItem {
     public String action;// 请求方法
     public String method;// 请求get/post
     public String info;
-    public Object pathParams;
+    public Object[] pathParams;
     public String[] param;// 请求参数
+    public HashMap<MediaType,Object> partBody;
     public HashMap<String,String> params;
     public String dynamicUrl;//动态的服务器域名
     public String url;// 请求url前缀
@@ -31,5 +34,6 @@ public class RequestItem {
         this.replace = true;
         this.headers=new HashMap<>();
         this.params=new HashMap<>();
+        this.partBody=new HashMap<>();
     }
 }
