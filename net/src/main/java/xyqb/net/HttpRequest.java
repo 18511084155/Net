@@ -3,6 +3,8 @@ package xyqb.net;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import java.io.File;
+
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -53,8 +55,13 @@ public class HttpRequest<T> {
         return this;
     }
 
-    public HttpRequest addPart(MediaType type,Object obj){
-        requestItem.partBody.put(type,obj);
+    public HttpRequest addPart(String name,File file){
+        requestItem.partBody.put(name,file);
+        return this;
+    }
+
+    public HttpRequest addStringEntity(String value){
+        requestItem.entity=value;
         return this;
     }
 
@@ -85,6 +92,7 @@ public class HttpRequest<T> {
                         item.headers = requestItem.headers;
                         item.pathParams=requestItem.pathParams;
                         item.partBody=requestItem.partBody;
+                        item.entity=requestItem.entity;
                         requestItem = item;
                         request(tag);
                         HttpLog.d("Get request item,call:"+action);
@@ -177,8 +185,13 @@ public class HttpRequest<T> {
             return this;
         }
 
-        public Builder addPart(MediaType type,Object obj){
-            requestItem.partBody.put(type,obj);
+        public Builder addPart(String name,File file){
+            requestItem.partBody.put(name,file);
+            return this;
+        }
+
+        public Builder addStringEntity(String value){
+            requestItem.entity=value;
             return this;
         }
 

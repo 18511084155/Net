@@ -145,7 +145,7 @@ public class OKHttp3 implements IRequest {
                         if(null!=requestConfig.requestResultListener){
                             requestConfig.requestResultListener.onFailed(exception, item, request.url().toString());
                         }
-                        HttpLog.d("Request failed:"+item.info);
+                        HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message);
                     }
                 }
                 catch(IOException e){
@@ -156,7 +156,7 @@ public class OKHttp3 implements IRequest {
                     if(null!=requestConfig.requestResultListener){
                         requestConfig.requestResultListener.onFailed(exception,item,item.url);
                     }
-                    HttpLog.d("Request failed:"+item.info+"\n"+e.getMessage());
+                    HttpLog.d("Request failed:"+item.info+"\nError:"+e.getMessage());
                 }
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
@@ -176,40 +176,40 @@ public class OKHttp3 implements IRequest {
         String requestUrl = getRequestUrl(item);
         if(POST.equals(item.method)){
 
-            MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
-            if(null!=item.pathParams){
-                requestUrl=String.format(requestUrl,item.pathParams);
-            }
-            String formParams=new String();
-            if(null!=params){
-                for (Map.Entry<String,String> entry:params.entrySet()) {
-                    formParams+=(entry.getKey()+"="+entry.getValue()+"\n");
-                    builder.addFormDataPart(entry.getKey(),entry.getValue());
+            RequestBody requestBody;
+            if(!TextUtils.isEmpty(item.entity)){
+                requestBody=RequestBody.create(JSON, item.entity);
+                HttpLog.d("POST:"+requestUrl+" Json:\n"+item.entity);
+            } else {
+                MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+                if(null!=item.pathParams){
+                    requestUrl=String.format(requestUrl,item.pathParams);
                 }
-            }
-            if(!item.partBody.isEmpty()){
-                for (Map.Entry<xyqb.net.MediaType,Object> entry:item.partBody.entrySet()) {
-                    xyqb.net.MediaType type = entry.getKey();
-                    Object value = entry.getValue();
-                    if(null!=value){
-                        RequestBody requestBody=null;
-                        if(xyqb.net.MediaType.JSON==type){
-                            requestBody=RequestBody.create(JSON, entry.toString());
-                        } else if(xyqb.net.MediaType.STREAM==type){
-                            if(value instanceof File){
-                                requestBody = RequestBody.create(STREAM, (File)value);
-                            }
-                        }
-                        if(null!=requestBody){
-                            builder.addPart(requestBody);
+                String formParams=new String();
+                if(null!=params){
+                    for (Map.Entry<String,String> entry:params.entrySet()) {
+                        formParams+=(entry.getKey()+"="+entry.getValue()+"\n");
+                        builder.addFormDataPart(entry.getKey(),entry.getValue());
+                    }
+                }
+                if(!item.partBody.isEmpty()){
+                    for (Map.Entry<String,File> entry:item.partBody.entrySet()) {
+                        String name = entry.getKey();
+                        File file = entry.getValue();
+                        if(!TextUtils.isEmpty(name)&&null!=file&&file.exists()){
+                            HttpLog.d("POST:"+requestUrl+" File:\n"+file.getAbsolutePath());
+                            requestBody=RequestBody.create(STREAM, file);
+                            builder.addFormDataPart(name,file.getName(),requestBody);
                         }
                     }
                 }
+                requestBody=builder.build();
+                HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
             }
-            HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
+
             Request.Builder requestBuilder = new Request.Builder()
                     .url(requestUrl)
-                    .post(builder.build());
+                    .post(requestBody);
             initRequestBuild(tag, item, requestBuilder);
 
             request=requestBuilder.build();
@@ -222,7 +222,7 @@ public class OKHttp3 implements IRequest {
             if(null!=params){
                 int index=0;
                 int length=params.size();
-                for (Map.Entry<String,String> entry:params.entrySet()) {
+                for (Map.Entry<String, String> entry : params.entrySet()) {
                     fullUrl.append(entry.getKey() + "=" + entry.getValue() + (index++ == length - 1 ? "" : "&"));
                 }
             }

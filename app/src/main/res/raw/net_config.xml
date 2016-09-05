@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <net>
-    <item action="hotel_detail" info="酒店详情" method="post" url="api/mall/%s/%s/path?" />
+    <item action="hotel_order_pay"  info="酒店订单支付" method="post" url="api/mall/hotel/pay"  />
+
+    <item action="hotel_city" info="城市列表"  url="api/mall/hotel/cities" />
 </net>

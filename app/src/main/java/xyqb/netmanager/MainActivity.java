@@ -30,8 +30,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 content.setText(null);
-                HttpRequest.obtain(NetConfig.HOTEL_DETAIL,"2016-8-22","2016-8-26").
-                        addPathValue(12,"abc").
+                //post json
+//                HttpRequest.obtain(NetConfig.HOTEL_ORDER_PAY).
+//                        addStringEntity("{\"hotelPhone\":\"021-64471372\",\"hotelName\":\"源涞国际酒店式公寓(测试)\",\"hotelAddress\":\"徐汇区虹桥路168弄东方曼哈顿5号-1703(近文定路\\/1,9,11号线徐家汇站旁)\",\"roomName\":\"单人间(无窗)\",\"roomTypeId\":\"1024\",\"ratePlanId\":\"415940\",\"arrivalDate\":\"2016-9-5\",\"departureDate\":\"2016-9-6\",\"numberOfRooms\":1,\"numberOfCustomers\":1,\"totalPrice\":174,\"orderRooms\":[{\"customers\":[{\"name\":\"eyy\"}]}],\"contact\":{\"name\":\"et\",\"phone\":\"\"}}").
+//                        setResultFilter(new JsonParamsResultFilter()).
+//                        setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
+//                            @Override
+//                            public void onSuccess(HttpResponse result, HashMap<String, String> params) {
+//                                Log.e(TAG,result.result);
+//                                content.setText(result.result);
+//                            }
+//                        }).setOnRequestFailedListener(new OnRequestFailedListener() {
+//                    @Override
+//                    public void onFailed(int code, HttpException e) {
+//                        Log.e(TAG,e.getMessage());
+//                        content.setText(e.getMessage());
+//                    }
+//                }).call(null);
+
+                //post
+                HttpRequest.obtain(NetConfig.HOTEL_CITY).
                         setResultFilter(new JsonParamsResultFilter()).
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override
@@ -46,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
                         content.setText(e.getMessage());
                     }
                 }).call(null);
+
+
             }
         });
 
