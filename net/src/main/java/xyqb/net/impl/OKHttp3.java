@@ -141,11 +141,14 @@ public class OKHttp3 implements IRequest {
                         exception.code = Integer.valueOf(params.get("code"));
                         exception.message = params.get("message");
                         exception.headers = httpResponse.headers;
+                        if(!params.isEmpty()){
+                            exception.params.putAll(params);
+                        }
                         exception.result = result;
                         if(null!=requestConfig.requestResultListener){
                             requestConfig.requestResultListener.onFailed(exception, item, request.url().toString());
                         }
-                        HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message);
+                        HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
                     }
                 }
                 catch(IOException e){
@@ -174,17 +177,16 @@ public class OKHttp3 implements IRequest {
             }
         }
         String requestUrl = getRequestUrl(item);
-        if(POST.equals(item.method)){
-
+        if(POST.equals(item.method)||PUT.equals(item.method)){
             RequestBody requestBody;
+            if(null!=item.pathParams){
+                requestUrl=String.format(requestUrl,item.pathParams);
+            }
             if(!TextUtils.isEmpty(item.entity)){
                 requestBody=RequestBody.create(JSON, item.entity);
                 HttpLog.d("POST:"+requestUrl+" Json:\n"+item.entity);
             } else {
                 MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
-                if(null!=item.pathParams){
-                    requestUrl=String.format(requestUrl,item.pathParams);
-                }
                 String formParams=new String();
                 if(null!=params){
                     for (Map.Entry<String,String> entry:params.entrySet()) {
@@ -207,11 +209,13 @@ public class OKHttp3 implements IRequest {
                 HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
             }
 
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(requestUrl)
-                    .post(requestBody);
+            Request.Builder requestBuilder = new Request.Builder().url(requestUrl);
+            if(POST.equals(item.method)){
+                requestBuilder.post(requestBody);
+            } else if(PUT.equals(item.method)){
+                requestBuilder.put(requestBody);
+            }
             initRequestBuild(tag, item, requestBuilder);
-
             request=requestBuilder.build();
         } else {
             StringBuilder fullUrl = new StringBuilder(requestUrl);

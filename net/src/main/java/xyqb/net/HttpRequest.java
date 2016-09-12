@@ -1,9 +1,14 @@
 package xyqb.net;
 
+import android.app.Application;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.text.TextUtils;
 import android.util.Pair;
 
 import java.io.File;
+import java.lang.reflect.Method;
 
 import rx.Observable;
 import rx.functions.Action1;
@@ -21,12 +26,36 @@ import xyqb.net.resultfilter.ResultFilter;
  */
 public class HttpRequest<T> {
     private static final IRequest requester =new OKHttp3();
+    private static Context appContext;
     private OnRequestSuccessListener successListener;
     private OnRequestFailedListener failedListener;
     private ResultFilter<T> requestFilter;
     private RequestItem requestItem;
     private String action;
     private Object[] params;
+
+    static {
+        appContext = getContext();
+    }
+
+    public static Context getContext() {
+        if (appContext == null) {
+            try {
+                final Class<?> activityThreadClass = HttpRequest.class.getClassLoader().loadClass("android.app.ActivityThread");
+                final Method currentActivityThread = activityThreadClass
+                        .getDeclaredMethod("currentActivityThread");
+                final Object activityThread = currentActivityThread
+                        .invoke(null);
+                final Method getApplication = activityThreadClass
+                        .getDeclaredMethod("getApplication");
+                final Application application = (Application) getApplication
+                        .invoke(activityThread);
+                appContext = application.getApplicationContext();
+            } catch (final Exception e) {
+            }
+        }
+        return appContext;
+    }
 
 
     public static HttpRequest obtain(String action,final Object...params){
@@ -106,46 +135,83 @@ public class HttpRequest<T> {
         }
     }
 
+
+    public static boolean isEnableNetWork() {
+        return isWIFI() || isMobile();
+    }
+
+
+    public static boolean isWIFI() {
+        Context context = getContext();
+        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = manager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        boolean result = false;
+        if (networkInfo != null) {
+            result = networkInfo.isConnected();
+        }
+        return result;
+    }
+
+
+    public  static boolean isMobile() {
+        Context context = getContext();
+        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = manager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+        boolean result = false;
+        if (networkInfo != null) {
+            result = networkInfo.isConnected();
+        }
+        return result;
+    }
+
     private void request(String tag) {
         ensureRequestItem(requestItem);
         Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
-        observable.map(new Func1<HttpResponse,Pair<HttpResponse,T>>() {
-            @Override
-            public Pair<HttpResponse, T> call(HttpResponse response) {
-                T t;
-                if(null!=HttpRequest.this.requestFilter){
-                    t = HttpRequest.this.requestFilter.result(response.result);
-                    HttpLog.d("Result filter complete, The object is:"+t);
-                } else {
-                    t= (T) response.result;
-                }
-                return new Pair<>(response,t);
-            }
-        }).subscribe(new Action1<Pair<HttpResponse, T>>() {
-            @Override
-            public void call(Pair<HttpResponse, T> pair) {
-                if (null != successListener) {
-                    successListener.onSuccess(pair.first, pair.second);
-                }
-            }
-        }, new Action1<Throwable>() {
-            @Override
-            public void call(Throwable throwable) {
-                if (null != failedListener) {
-                    HttpException exception;
-                    if (throwable instanceof HttpException) {
-                        exception=(HttpException)throwable;
-                        HttpLog.d("Request failed code:"+exception.code+" message:\n"+exception.message);
+        if(isEnableNetWork()){
+            observable.map(new Func1<HttpResponse,Pair<HttpResponse,T>>() {
+                @Override
+                public Pair<HttpResponse, T> call(HttpResponse response) {
+                    T t;
+                    if(null!=HttpRequest.this.requestFilter){
+                        t = HttpRequest.this.requestFilter.result(response.result);
+                        HttpLog.d("Result filter complete, The object is:"+t);
                     } else {
-                        exception=new HttpException();
-                        exception.message=throwable.getMessage();
-                        exception.code=IRequest.REQUEST_ERROR;
-                        HttpLog.d("Request failed:\n"+exception.getMessage());
+                        t= (T) response.result;
                     }
-                    failedListener.onFailed(exception.code, exception);
+                    return new Pair<>(response,t);
                 }
-            }
-        });
+            }).subscribe(new Action1<Pair<HttpResponse, T>>() {
+                @Override
+                public void call(Pair<HttpResponse, T> pair) {
+                    if (null != successListener) {
+                        successListener.onSuccess(pair.first, pair.second);
+                    }
+                }
+            }, new Action1<Throwable>() {
+                @Override
+                public void call(Throwable throwable) {
+                    if (null != failedListener) {
+                        HttpException exception;
+                        if (throwable instanceof HttpException) {
+                            exception=(HttpException)throwable;
+                            HttpLog.d("Request failed code:"+exception.code+" message:\n"+exception.message);
+                        } else {
+                            exception=new HttpException();
+                            exception.message=throwable.getMessage();
+                            exception.code=IRequest.REQUEST_ERROR;
+                            HttpLog.d("Request failed:\n"+exception.getMessage());
+                        }
+                        failedListener.onFailed(exception.code, exception);
+                    }
+                }
+            });
+        } else if(null!=failedListener){
+            HttpException exception=new HttpException();
+            exception.code=IRequest.REQUEST_NO_NETWORK;
+            exception.message="Request no network!";
+            HttpLog.d("Request failed:\n"+exception.getMessage());
+            failedListener.onFailed(exception.code, exception);
+        }
     }
 
     private void ensureRequestItem(RequestItem item){
@@ -153,8 +219,8 @@ public class HttpRequest<T> {
             throw new NullPointerException("request item is null!");
         } else if(TextUtils.isEmpty(item.url)){
             throw new NullPointerException("request url is null!");
-        } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)){
-            throw new IllegalArgumentException("http request method error,not get or post!");
+        } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)&&!"put".equals(item.method)){
+            throw new IllegalArgumentException("http request method error,not get post or put!");
         }
     }
 
