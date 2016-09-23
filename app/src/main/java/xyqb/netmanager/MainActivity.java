@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 //                }).call(null);
 
                 //post
-                HttpRequest.obtain(NetConfig.HOTEL_CITY).
+                HttpRequest.obtain("image_code",System.currentTimeMillis()).
                         setResultFilter(new JsonParamsResultFilter()).
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override

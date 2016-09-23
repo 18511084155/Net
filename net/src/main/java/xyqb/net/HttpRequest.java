@@ -15,6 +15,7 @@ import rx.functions.Action1;
 import rx.functions.Func1;
 import xyqb.net.callback.OnRequestFailedListener;
 import xyqb.net.callback.OnRequestSuccessListener;
+import xyqb.net.callback.OnResultCacheListener;
 import xyqb.net.exception.HttpException;
 import xyqb.net.impl.OKHttp3;
 import xyqb.net.model.HttpResponse;
@@ -27,6 +28,7 @@ import xyqb.net.resultfilter.ResultFilter;
 public class HttpRequest<T> {
     private static final IRequest requester =new OKHttp3();
     private static Context appContext;
+    private OnResultCacheListener resultCacheListener;
     private OnRequestSuccessListener successListener;
     private OnRequestFailedListener failedListener;
     private ResultFilter<T> requestFilter;
@@ -37,6 +39,7 @@ public class HttpRequest<T> {
     static {
         appContext = getContext();
     }
+
 
     public static Context getContext() {
         if (appContext == null) {
@@ -91,6 +94,11 @@ public class HttpRequest<T> {
 
     public HttpRequest addStringEntity(String value){
         requestItem.entity=value;
+        return this;
+    }
+
+    public HttpRequest setOnResultCacheListener(OnResultCacheListener listener){
+        resultCacheListener=listener;
         return this;
     }
 
@@ -172,11 +180,15 @@ public class HttpRequest<T> {
                 @Override
                 public Pair<HttpResponse, T> call(HttpResponse response) {
                     T t;
-                    if(null!=HttpRequest.this.requestFilter){
-                        t = HttpRequest.this.requestFilter.result(response.result);
+                    if(null!=requestFilter){
+                        t = requestFilter.result(response.result);
                         HttpLog.d("Result filter complete, The object is:"+t);
                     } else {
                         t= (T) response.result;
+                    }
+                    //请求结果处理
+                    if(null!=resultCacheListener){
+                        resultCacheListener.onResultCache(response.result);
                     }
                     return new Pair<>(response,t);
                 }

@@ -21,6 +21,7 @@ import javax.net.ssl.X509TrustManager;
 import okhttp3.Cache;
 import okhttp3.Call;
 import okhttp3.Headers;
+import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -46,18 +47,36 @@ import xyqb.net.resultfilter.JsonParamsResultFilter;
 public class OKHttp3 implements IRequest {
     private static final OkHttpClient httpClient;
     private static final RequestConfig requestConfig;
+    private static final Interceptor DEFAULT_CACHE_CONTROL_INTERCEPTOR;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final MediaType STREAM=MediaType.parse("application/octet-stream");
+
     static {
         requestConfig = NetManager.getInstance().getRequestConfig();
+
+        DEFAULT_CACHE_CONTROL_INTERCEPTOR = new Interceptor() {
+            @Override
+            public Response intercept(Chain chain) throws IOException {
+                Response originalResponse = chain.proceed(chain.request());
+                return originalResponse.newBuilder().removeHeader("Pragma")
+                        .header("Cache-Control", String.format("max-age=%d", 10)).build();
+            }
+        };
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder()
                 .connectTimeout(requestConfig.connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(requestConfig.readTimeout, TimeUnit.SECONDS)
                 .writeTimeout(requestConfig.writeTimeout, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(requestConfig.retryOnConnectionFailure);
-        if(null!=requestConfig.cachedFile){
-            clientBuilder.cache(new Cache(requestConfig.cachedFile, requestConfig.maxCacheSize));
+                .retryOnConnectionFailure(requestConfig.retryOnConnectionFailure)
+                .addNetworkInterceptor(DEFAULT_CACHE_CONTROL_INTERCEPTOR);
+        File cachedFile = requestConfig.cachedFile;
+        if(null!=cachedFile&&cachedFile.exists()){
+            long maxCacheSize = requestConfig.maxCacheSize;
+            if(0==requestConfig.maxCacheSize){
+                maxCacheSize=MAX_CACHE_SIZE;
+            }
+            clientBuilder.cache(new Cache(cachedFile, maxCacheSize));
         }
+        setSslSocketFactory(clientBuilder);
         httpClient=clientBuilder.build();
     }
     public OKHttp3() {
@@ -66,7 +85,7 @@ public class OKHttp3 implements IRequest {
     /**
      * 设置HTTPS认证
      */
-    private void setSslSocketFactory(OkHttpClient.Builder clientBuilder){
+    private static void setSslSocketFactory(OkHttpClient.Builder clientBuilder){
         clientBuilder.hostnameVerifier(new HostnameVerifier() {
             public boolean verify(String hostname, SSLSession session) {
                 return true;
@@ -138,7 +157,12 @@ public class OKHttp3 implements IRequest {
                         //request success but content is fail
                         HashMap<String, String> params = new JsonParamsResultFilter().result(result);
                         HttpException exception = new HttpException();
-                        exception.code = Integer.valueOf(params.get("code"));
+                        String codeValue = params.get("code");
+                        if(!TextUtils.isEmpty(codeValue)){
+                            exception.code = Integer.valueOf(codeValue);
+                        } else {
+                            exception.code=IRequest.REQUEST_NO_CODE;
+                        }
                         exception.message = params.get("message");
                         exception.headers = httpResponse.headers;
                         if(!params.isEmpty()){
@@ -148,6 +172,7 @@ public class OKHttp3 implements IRequest {
                         if(null!=requestConfig.requestResultListener){
                             requestConfig.requestResultListener.onFailed(exception, item, request.url().toString());
                         }
+                        subscriber.onError(exception);
                         HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
                     }
                 }
@@ -159,6 +184,7 @@ public class OKHttp3 implements IRequest {
                     if(null!=requestConfig.requestResultListener){
                         requestConfig.requestResultListener.onFailed(exception,item,item.url);
                     }
+                    subscriber.onError(exception);
                     HttpLog.d("Request failed:"+item.info+"\nError:"+e.getMessage());
                 }
             }
@@ -178,7 +204,7 @@ public class OKHttp3 implements IRequest {
         }
         String requestUrl = getRequestUrl(item);
         if(POST.equals(item.method)||PUT.equals(item.method)){
-            RequestBody requestBody;
+            RequestBody requestBody=null;
             if(null!=item.pathParams){
                 requestUrl=String.format(requestUrl,item.pathParams);
             }
@@ -206,7 +232,7 @@ public class OKHttp3 implements IRequest {
                     }
                 }
                 requestBody=builder.build();
-                HttpLog.d("POST:"+requestUrl+" FROM:\n"+formParams);
+                HttpLog.d(item.method+":"+requestUrl+" FROM:\n"+formParams);
             }
 
             Request.Builder requestBuilder = new Request.Builder().url(requestUrl);
@@ -230,7 +256,8 @@ public class OKHttp3 implements IRequest {
                     fullUrl.append(entry.getKey() + "=" + entry.getValue() + (index++ == length - 1 ? "" : "&"));
                 }
             }
-            HttpLog.d("Get:"+fullUrl.toString());
+
+            HttpLog.d("Get:" +fullUrl.toString());
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
             initRequestBuild(tag, item, requestBuilder);
             request=requestBuilder.build();
