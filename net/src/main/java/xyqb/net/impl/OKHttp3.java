@@ -7,7 +7,10 @@ import java.io.IOException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -50,10 +53,10 @@ public class OKHttp3 implements IRequest {
     private static final Interceptor DEFAULT_CACHE_CONTROL_INTERCEPTOR;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final MediaType STREAM=MediaType.parse("application/octet-stream");
-
+    private static final HashMap<String,List<Call>> callItems;
     static {
+        callItems=new HashMap<>();
         requestConfig = NetManager.getInstance().getRequestConfig();
-
         DEFAULT_CACHE_CONTROL_INTERCEPTOR = new Interceptor() {
             @Override
             public Response intercept(Chain chain) throws IOException {
@@ -126,15 +129,35 @@ public class OKHttp3 implements IRequest {
         return call(tag, item, params);
     }
 
+    @Override
+    public void cancel(String tag) {
+        List<Call> callsItem = callItems.get(tag);
+        if(null!=callsItem){
+            for(Iterator<Call> iterator=callsItem.iterator();iterator.hasNext();){
+                Call call = iterator.next();
+                iterator.remove();
+                if(!call.isCanceled()){
+                    call.cancel();
+                }
+            }
+        }
+    }
+
 
     public Observable<HttpResponse> call(final String tag,final RequestItem item, final HashMap<String,String> params){
 
         return Observable.create(new Observable.OnSubscribe<HttpResponse>() {
             @Override
             public void call(Subscriber<? super HttpResponse> subscriber) {
+                Call call =null;
                 try {
-                    final Request request = getRequest(tag,item, params);
-                    final Call call = httpClient.newCall(request);
+                    final Request request = getRequest(tag, item, params);
+                    call = httpClient.newCall(request);
+                    List<Call> calls = callItems.get(tag);
+                    if(null==calls){
+                        callItems.put(tag,calls=new ArrayList<>());
+                    }
+                    calls.add(call);
                     Response response = call.execute();
                     Headers headers = request.headers();
                     HttpResponse httpResponse = new HttpResponse();
@@ -147,6 +170,7 @@ public class OKHttp3 implements IRequest {
                     //url headers
                     String result = response.body().string();
                     if (response.isSuccessful()) {
+                        removeCall(tag,call);
                         httpResponse.result = result;
                         subscriber.onNext(httpResponse);
                         if(null!=requestConfig.requestResultListener){
@@ -155,6 +179,7 @@ public class OKHttp3 implements IRequest {
                         HttpLog.d("Request success:"+item.info);
                     }else{
                         //request success but content is fail
+                        removeCall(tag,call);
                         HashMap<String, String> params = new JsonParamsResultFilter().result(result);
                         HttpException exception = new HttpException();
                         String codeValue = params.get("code");
@@ -178,6 +203,7 @@ public class OKHttp3 implements IRequest {
                 }
                 catch(IOException e){
                     //request failed
+                    removeCall(tag,call);
                     HttpException exception = new HttpException();
                     exception.code = IRequest.REQUEST_ERROR;
                     exception.message = e.getMessage();
@@ -191,6 +217,14 @@ public class OKHttp3 implements IRequest {
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
     }
 
+    private void removeCall(String tag,Call call) {
+        if(null!=call){
+            List<Call> callsItem = callItems.get(tag);
+            if(null!=callsItem){
+                callsItem.remove(call);
+            }
+        }
+    }
 
 
     private Request getRequest(String tag,RequestItem item,Map<String, String> params){
@@ -257,12 +291,28 @@ public class OKHttp3 implements IRequest {
                 }
             }
 
-            HttpLog.d("Get:" +fullUrl.toString());
+            HttpLog.d("Get:" + fullUrl.toString());
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
             initRequestBuild(tag, item, requestBuilder);
             request=requestBuilder.build();
         }
+        //add cookie
+        if (null!=item.cookies&&!item.cookies.isEmpty()) {
+            Request.Builder newBuilder = request.newBuilder();
+            String cookieValue = getCookieValue(item.cookies);
+            newBuilder.header("Cookie", cookieValue);
+            HttpLog.d("Add cookie:" + cookieValue);
+            request=newBuilder.build();
+        }
         return request;
+    }
+
+    private String getCookieValue(HashMap<String,String> cookies) {
+        StringBuilder cookieHeader = new StringBuilder();
+        for(Map.Entry<String,String> entry:cookies.entrySet()){
+            cookieHeader.append(entry.getKey() + '=' + entry.getValue() + "; ");
+        }
+        return cookieHeader.toString();
     }
 
 

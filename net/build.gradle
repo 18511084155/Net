@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
-version = "1.2.0"
+version = "1.2.1"
 android {
     compileSdkVersion 24
     buildToolsVersion "24.0.1"
@@ -95,5 +95,5 @@ dependencies {
     compile 'io.reactivex:rxjava:1.1.6'
     compile 'io.reactivex:rxandroid:0.24.0'
     compile 'com.squareup.okhttp3:okhttp:3.4.1'
-    compile 'com.cz.xml:library:1.0.1'
+    compile 'com.cz.xml:library:1.0.3'
 }

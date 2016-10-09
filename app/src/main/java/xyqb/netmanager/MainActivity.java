@@ -8,6 +8,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 
 import xyqb.net.HttpRequest;
@@ -48,8 +50,25 @@ public class MainActivity extends AppCompatActivity {
 //                    }
 //                }).call(null);
 
+                // APP ID
+                final String APP_ID = "0002";
+                // APP KEY
+                final String APP_KEY = "lkb010203#$%";
                 //post
-                HttpRequest.obtain("image_code",System.currentTimeMillis()).
+                String timeStamp = String.valueOf(System.currentTimeMillis());
+                String tokenValue=md5((new StringBuffer()
+                        .append("timeunit=").append(timeStamp)
+                        .append("appkey=").append(APP_KEY)).toString());
+
+
+
+                String userId="15101604692";
+                String feedbackValue="abcdefghikjlmn";
+                String token="0039615f-0bdf-4f8e-9851-6c99c89b224f";
+                HttpRequest.obtain(NetConfig.USER_SUGGESTION,userId,feedbackValue,userId,userId,APP_ID,timeStamp,tokenValue).
+                        addHeader("X-Auth-Token", token).
+                        addHeader("X-Requested-With", "XMLHttpRequest").
+                        addHeader("Content-Type", "application/json").
                         setResultFilter(new JsonParamsResultFilter()).
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override
@@ -63,12 +82,34 @@ public class MainActivity extends AppCompatActivity {
                         Log.e(TAG,e.getMessage());
                         content.setText(e.getMessage());
                     }
-                }).call(null);
+                }).call();
 
 
             }
         });
 
+    }
+
+    public String md5(String content) {
+        MessageDigest md5 = null;
+        try {
+            md5 = MessageDigest.getInstance("md5");
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        md5.update(content.getBytes());
+        byte[] domain = md5.digest();
+        StringBuffer md5StrBuff = new StringBuffer();
+        // converting domain to String
+        for (int i = 0; i < domain.length; i++) {
+            if (Integer.toHexString(0xFF & domain[i]).length() == 1) {
+                md5StrBuff.append("0").append(
+                        Integer.toHexString(0xFF & domain[i]));
+            } else
+                md5StrBuff.append(Integer.toHexString(0xFF & domain[i]));
+        }
+        return md5StrBuff.toString();
     }
 
     @Override

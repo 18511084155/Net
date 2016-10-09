@@ -17,6 +17,7 @@ public class RequestItem {
     public String[] param;// 请求参数
     public String entity;
     public HashMap<String,File> partBody;
+    public HashMap<String,String> cookies;
     public HashMap<String,String> params;
     public String dynamicUrl;//动态的服务器域名
     public String url;// 请求url前缀
@@ -33,6 +34,7 @@ public class RequestItem {
         this.extras = true;
         this.replace = true;
         this.headers=new HashMap<>();
+        this.cookies=new HashMap<>();
         this.params=new HashMap<>();
         this.partBody=new HashMap<>();
     }

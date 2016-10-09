@@ -6,4 +6,6 @@ package xyqb.netmanager;
 public interface NetConfig {
     String HOTEL_ORDER_PAY="hotel_order_pay";
     String HOTEL_CITY="hotel_city";
+
+    String USER_SUGGESTION="user_suggestion";
 }

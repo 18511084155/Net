@@ -5,4 +5,9 @@
     <item action="hotel_city" info="城市列表"  url="api/mall/hotel/cities" />
 
     <item action="image_code"  info="图片验证码"  url="http://192.168.192.214:9000/api/captchas/sms-captcha" method="post" params="time" />
+
+    <item action="image_code"  info="图片验证码"  url="http://192.168.192.214:9000/api/captchas/sms-captcha" method="post" params="time" />
+
+    <item action="user_suggestion" info="意见反馈" method="post" params="userId&amp;content&amp;contact&amp;currentUser&amp;appId&amp;timeunit&amp;token"
+        url="http://openapi.quantgroup.cn/LKBClient/feedback/save.json"/>
 </net>

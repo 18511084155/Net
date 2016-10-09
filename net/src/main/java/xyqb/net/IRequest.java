@@ -17,4 +17,6 @@ public interface IRequest {
     String PUT ="put";
 
     Observable<HttpResponse> call(String tag,RequestItem item,Object... values);
+
+    void cancel(String tag);
 }

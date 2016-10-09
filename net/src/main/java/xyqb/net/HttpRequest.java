@@ -9,8 +9,13 @@ import android.util.Pair;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 
 import rx.Observable;
+import rx.Subscription;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import xyqb.net.callback.OnRequestFailedListener;
@@ -27,6 +32,7 @@ import xyqb.net.resultfilter.ResultFilter;
  */
 public class HttpRequest<T> {
     private static final IRequest requester =new OKHttp3();
+    private static final HashMap<String,List<Subscription>> subscriptionItems;
     private static Context appContext;
     private OnResultCacheListener resultCacheListener;
     private OnRequestSuccessListener successListener;
@@ -38,6 +44,7 @@ public class HttpRequest<T> {
 
     static {
         appContext = getContext();
+        subscriptionItems=new HashMap<>();
     }
 
 
@@ -82,6 +89,11 @@ public class HttpRequest<T> {
         return this;
     }
 
+    public HttpRequest addCookie(String name,String value){
+        requestItem.cookies.put(name, value);
+        return this;
+    }
+
     public HttpRequest addPathValue(Object... params){
         requestItem.pathParams=params;
         return this;
@@ -118,8 +130,8 @@ public class HttpRequest<T> {
     }
 
 
-    public void call(Object obj){
-        final String tag=(null==obj?null:obj.getClass().getSimpleName());
+    public void call(){
+        final String tag=getCallClassTag();
         if(!TextUtils.isEmpty(action)){
             NetManager.getInstance().requestItem(action, new Action1<RequestItem>() {
                 @Override
@@ -130,6 +142,7 @@ public class HttpRequest<T> {
                         item.pathParams=requestItem.pathParams;
                         item.partBody=requestItem.partBody;
                         item.entity=requestItem.entity;
+                        item.cookies=requestItem.cookies;
                         requestItem = item;
                         request(tag);
                         HttpLog.d("Get request item,call:"+action);
@@ -141,6 +154,25 @@ public class HttpRequest<T> {
         } else {
             request(tag);
         }
+    }
+
+    private  String getCallClassTag() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        int length = stackTrace.length;
+        String name = getClass().getName();
+        StackTraceElement stackTraceElement = null;
+        boolean isLogClass=false;
+        for (int i = 0; i < length; i++) {
+            stackTraceElement = stackTrace[i];
+            if (name.equals(stackTraceElement.getClassName())) {
+                isLogClass=true;
+            } else if(isLogClass){
+                break;
+            }
+        }
+        String fileName=stackTraceElement.getFileName();
+        return fileName.substring(0,fileName.lastIndexOf("."));
+
     }
 
 
@@ -176,21 +208,21 @@ public class HttpRequest<T> {
         ensureRequestItem(requestItem);
         Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
         if(isEnableNetWork()){
-            observable.map(new Func1<HttpResponse,Pair<HttpResponse,T>>() {
+            Subscription subscribe = observable.map(new Func1<HttpResponse, Pair<HttpResponse, T>>() {
                 @Override
                 public Pair<HttpResponse, T> call(HttpResponse response) {
                     T t;
-                    if(null!=requestFilter){
+                    if (null != requestFilter) {
                         t = requestFilter.result(response.result);
-                        HttpLog.d("Result filter complete, The object is:"+t);
+                        HttpLog.d("Result filter complete, The object is:" + t);
                     } else {
-                        t= (T) response.result;
+                        t = (T) response.result;
                     }
                     //请求结果处理
-                    if(null!=resultCacheListener){
+                    if (null != resultCacheListener) {
                         resultCacheListener.onResultCache(response.result);
                     }
-                    return new Pair<>(response,t);
+                    return new Pair<>(response, t);
                 }
             }).subscribe(new Action1<Pair<HttpResponse, T>>() {
                 @Override
@@ -205,24 +237,44 @@ public class HttpRequest<T> {
                     if (null != failedListener) {
                         HttpException exception;
                         if (throwable instanceof HttpException) {
-                            exception=(HttpException)throwable;
-                            HttpLog.d("Request failed code:"+exception.code+" message:\n"+exception.message);
+                            exception = (HttpException) throwable;
+                            HttpLog.d("Request failed code:" + exception.code + " message:\n" + exception.message);
                         } else {
-                            exception=new HttpException();
-                            exception.message=throwable.getMessage();
-                            exception.code=IRequest.REQUEST_ERROR;
-                            HttpLog.d("Request failed:\n"+exception.getMessage());
+                            exception = new HttpException();
+                            exception.message = throwable.getMessage();
+                            exception.code = IRequest.REQUEST_ERROR;
+                            HttpLog.d("Request failed:\n" + exception.getMessage());
                         }
                         failedListener.onFailed(exception.code, exception);
                     }
                 }
             });
+            List<Subscription> subscriptions = subscriptionItems.get(tag);
+            if(null==subscriptions){
+                subscriptionItems.put(tag,subscriptions=new ArrayList<>());
+            }
+            subscriptions.add(subscribe);
         } else if(null!=failedListener){
             HttpException exception=new HttpException();
             exception.code=IRequest.REQUEST_NO_NETWORK;
             exception.message="Request no network!";
             HttpLog.d("Request failed:\n"+exception.getMessage());
             failedListener.onFailed(exception.code, exception);
+        }
+    }
+
+    public static void cancel(Object object){
+        String tag = object.getClass().getSimpleName();
+        requester.cancel(tag);
+        List<Subscription> subscriptions = subscriptionItems.get(tag);
+        if(null!=subscriptions){
+            for(Iterator<Subscription> iterator=subscriptions.iterator();iterator.hasNext();){
+                Subscription subscription = iterator.next();
+                iterator.remove();
+                if(subscription.isUnsubscribed()){
+                    subscription.unsubscribe();
+                }
+            }
         }
     }
 
@@ -260,6 +312,11 @@ public class HttpRequest<T> {
 
         public Builder addHeader(String name,String value){
             requestItem.headers.put(name,value);
+            return this;
+        }
+
+        public Builder addCookie(String name,String value){
+            requestItem.cookies.put(name, value);
             return this;
         }
 
