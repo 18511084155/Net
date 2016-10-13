@@ -1,4 +1,4 @@
-package xyqb.net;
+package xyqb.net.log;
 
 import android.util.Log;
 

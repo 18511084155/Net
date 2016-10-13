@@ -9,11 +9,9 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import xyqb.net.NetManager;
 import xyqb.net.model.RequestConfig;
 import xyqb.net.model.RequestItem;
 import xyqb.xml.XmlAttribute;
@@ -27,20 +25,20 @@ public class RequestConfigReader {
     private static final String TAG = "RequestConfigReader";
     private final RequestConfig requestConfig;
     private  XmlElement cacheElement;
-    private Context appContext;
+    private static Context appContext;
+
+    static {
+        appContext=getContext();
+    }
 
     public RequestConfigReader(RequestConfig requestConfig) {
         this.requestConfig = requestConfig;
     }
 
-    private Context getContext() {
+    private static Context getContext() {
         if (appContext == null) {
             try {
-                final Class<?> activityThreadClass = NetManager.class.getClassLoader().loadClass("android.app.ActivityThread");
-                final Method currentActivityThread = activityThreadClass.getDeclaredMethod("currentActivityThread");
-                final Object activityThread = currentActivityThread.invoke(null);
-                final Method getApplication = activityThreadClass.getDeclaredMethod("getApplication");
-                final Application application = (Application) getApplication.invoke(activityThread);
+                Application application=(Application) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
                 appContext = application.getApplicationContext();
             } catch (final Exception e) {
                 e.printStackTrace();

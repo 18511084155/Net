@@ -1,7 +1,7 @@
 package xyqb.netmanager;
 
+import android.app.Activity;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,7 +19,7 @@ import xyqb.net.exception.HttpException;
 import xyqb.net.model.HttpResponse;
 import xyqb.net.resultfilter.JsonParamsResultFilter;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
 
@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 content.setText(null);
-                //post json
+//                post json
 //                HttpRequest.obtain(NetConfig.HOTEL_ORDER_PAY).
 //                        addStringEntity("{\"hotelPhone\":\"021-64471372\",\"hotelName\":\"源涞国际酒店式公寓(测试)\",\"hotelAddress\":\"徐汇区虹桥路168弄东方曼哈顿5号-1703(近文定路\\/1,9,11号线徐家汇站旁)\",\"roomName\":\"单人间(无窗)\",\"roomTypeId\":\"1024\",\"ratePlanId\":\"415940\",\"arrivalDate\":\"2016-9-5\",\"departureDate\":\"2016-9-6\",\"numberOfRooms\":1,\"numberOfCustomers\":1,\"totalPrice\":174,\"orderRooms\":[{\"customers\":[{\"name\":\"eyy\"}]}],\"contact\":{\"name\":\"et\",\"phone\":\"\"}}").
 //                        setResultFilter(new JsonParamsResultFilter()).
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 //                        Log.e(TAG,e.getMessage());
 //                        content.setText(e.getMessage());
 //                    }
-//                }).call(null);
+//                }).call();
 
                 // APP ID
                 final String APP_ID = "0002";
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
                 String userId="15101604692";
                 String feedbackValue="abcdefghikjlmn";
                 String token="0039615f-0bdf-4f8e-9851-6c99c89b224f";
-                HttpRequest.obtain(NetConfig.USER_SUGGESTION,userId,feedbackValue,userId,userId,APP_ID,timeStamp,tokenValue).
+                HttpRequest.obtain(NetConfig.USER_SUGGESTION, userId, feedbackValue, userId, userId, APP_ID, timeStamp, tokenValue).
                         addHeader("X-Auth-Token", token).
                         addHeader("X-Requested-With", "XMLHttpRequest").
                         addHeader("Content-Type", "application/json").
@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
                         setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
                             @Override
                             public void onSuccess(HttpResponse result, HashMap<String, String> params) {
-                                Log.e(TAG,result.result);
+                                Log.e(TAG, result.result);
                                 content.setText(result.result);
                             }
                         }).setOnRequestFailedListener(new OnRequestFailedListener() {

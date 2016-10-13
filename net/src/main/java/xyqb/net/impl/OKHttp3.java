@@ -35,7 +35,7 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import xyqb.net.HttpLog;
+import xyqb.net.log.HttpLog;
 import xyqb.net.IRequest;
 import xyqb.net.NetManager;
 import xyqb.net.exception.HttpException;
@@ -318,10 +318,12 @@ public class OKHttp3 implements IRequest {
 
     private void initRequestBuild(String tag, RequestItem item, Request.Builder requestBuilder) {
         //add global header items
+        StringBuilder headerBuilder=new StringBuilder();
         if(null!=requestConfig&&null!=requestConfig.listener){
             HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
             if(null!=headerItems){
                 for(Map.Entry<String,String> entry:headerItems.entrySet()){
+                    headerBuilder.append(entry.getKey()+"="+ entry.getValue()+";");
                     requestBuilder.addHeader(entry.getKey(),entry.getValue());
                 }
             }
@@ -329,12 +331,14 @@ public class OKHttp3 implements IRequest {
         //add custom header items
         if(null!=item.headers&&!item.headers.isEmpty()){
             for(Map.Entry<String,String> entry:item.headers.entrySet()){
+                headerBuilder.append(entry.getKey()+"="+ entry.getValue()+";");
                 requestBuilder.addHeader(entry.getKey(),entry.getValue());
             }
         }
         if(null!=tag){
             requestBuilder.tag(tag);
         }
+        HttpLog.d(item.info+" header:"+headerBuilder.toString());
     }
 
     private String getRequestUrl(RequestItem item){

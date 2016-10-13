@@ -8,7 +8,6 @@ import android.text.TextUtils;
 import android.util.Pair;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,6 +22,7 @@ import xyqb.net.callback.OnRequestSuccessListener;
 import xyqb.net.callback.OnResultCacheListener;
 import xyqb.net.exception.HttpException;
 import xyqb.net.impl.OKHttp3;
+import xyqb.net.log.HttpLog;
 import xyqb.net.model.HttpResponse;
 import xyqb.net.model.RequestItem;
 import xyqb.net.resultfilter.ResultFilter;
@@ -47,19 +47,10 @@ public class HttpRequest<T> {
         subscriptionItems=new HashMap<>();
     }
 
-
     public static Context getContext() {
         if (appContext == null) {
             try {
-                final Class<?> activityThreadClass = HttpRequest.class.getClassLoader().loadClass("android.app.ActivityThread");
-                final Method currentActivityThread = activityThreadClass
-                        .getDeclaredMethod("currentActivityThread");
-                final Object activityThread = currentActivityThread
-                        .invoke(null);
-                final Method getApplication = activityThreadClass
-                        .getDeclaredMethod("getApplication");
-                final Application application = (Application) getApplication
-                        .invoke(activityThread);
+                Application application=(Application) Class.forName("android.app.ActivityThread").getMethod("currentApplication").invoke(null);
                 appContext = application.getApplicationContext();
             } catch (final Exception e) {
             }
@@ -170,8 +161,12 @@ public class HttpRequest<T> {
                 break;
             }
         }
-        String fileName=stackTraceElement.getFileName();
-        return fileName.substring(0,fileName.lastIndexOf("."));
+        String className=stackTraceElement.getClassName();
+        int index = className.indexOf("$");
+        if(-1<index){
+            className=className.substring(0,index);
+        }
+        return className;
 
     }
 
@@ -264,7 +259,7 @@ public class HttpRequest<T> {
     }
 
     public static void cancel(Object object){
-        String tag = object.getClass().getSimpleName();
+        String tag = object.getClass().getName();
         requester.cancel(tag);
         List<Subscription> subscriptions = subscriptionItems.get(tag);
         if(null!=subscriptions){

@@ -12,6 +12,7 @@ import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 import xyqb.net.callback.OnRequestListener;
 import xyqb.net.callback.OnRequestResultListener;
+import xyqb.net.log.HttpLog;
 import xyqb.net.model.RequestConfig;
 import xyqb.net.model.RequestItem;
 import xyqb.net.xml.RequestConfigReader;
@@ -23,14 +24,12 @@ public class NetManager {
     private final int MAX_TIME_OUT=8*1000;
     private final int MAX_CACHE_SIZE=4*1024*1024;
     private static NetManager instance=new NetManager();
-    private final RequestConfig requestConfig;
+    private final RequestConfig requestConfig=new RequestConfig();
     private final RequestConfigReader configReader;
     private final HashMap<String,RequestItem> cacheItems;
 
-
     private NetManager(){
         cacheItems =new HashMap<>();
-        requestConfig =new RequestConfig();
         requestConfig.connectTimeout=MAX_TIME_OUT;
         requestConfig.writeTimeout=MAX_TIME_OUT;
         requestConfig.readTimeout=MAX_TIME_OUT;
@@ -42,13 +41,10 @@ public class NetManager {
         return instance;
     }
 
-
-
     public NetManager setRawName(String rawId){
         requestConfig.rawName=rawId;
         return this;
     }
-
     public NetManager setConfigPath(String path){
         requestConfig.path=path;
         return this;
@@ -136,9 +132,5 @@ public class NetManager {
     public RequestConfig getRequestConfig(){
         return requestConfig;
     }
-
-
-
-
 
 }
