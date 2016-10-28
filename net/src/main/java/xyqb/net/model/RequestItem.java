@@ -1,5 +1,7 @@
 package xyqb.net.model;
 
+import android.util.Pair;
+
 import java.io.File;
 import java.util.HashMap;
 
@@ -15,7 +17,7 @@ public class RequestItem {
     public String info;
     public Object[] pathParams;
     public String[] param;// 请求参数
-    public String entity;
+    public Pair<String,String> entity;
     public HashMap<String,File> partBody;
     public HashMap<String,String> cookies;
     public HashMap<String,String> params;
@@ -27,6 +29,7 @@ public class RequestItem {
     public boolean replace;//附加数据与现在数据重复时,是否替换
     public boolean encrypt;//请求参数是否加密
     public int version;//接口版本号
+    public long useTime;//请求耗时
     public HashMap<String,String> headers;
 
     public RequestItem() {
@@ -37,5 +40,15 @@ public class RequestItem {
         this.cookies=new HashMap<>();
         this.params=new HashMap<>();
         this.partBody=new HashMap<>();
+    }
+
+    public void copy(RequestItem item){
+        dynamicUrl = item.dynamicUrl;
+        headers = item.headers;
+        pathParams=item.pathParams;
+        partBody=item.partBody;
+        entity=item.entity;
+        cookies=item.cookies;
+        params=item.params;
     }
 }

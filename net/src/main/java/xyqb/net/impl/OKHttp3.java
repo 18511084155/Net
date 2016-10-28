@@ -35,14 +35,16 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
-import xyqb.net.log.HttpLog;
 import xyqb.net.IRequest;
 import xyqb.net.NetManager;
 import xyqb.net.exception.HttpException;
+import xyqb.net.log.HttpLog;
 import xyqb.net.model.HttpResponse;
 import xyqb.net.model.RequestConfig;
 import xyqb.net.model.RequestItem;
 import xyqb.net.resultfilter.JsonParamsResultFilter;
+import xyqb.net.util.NetUtils;
+
 
 /**
  * Created by cz on 8/23/16.
@@ -52,6 +54,7 @@ public class OKHttp3 implements IRequest {
     private static final RequestConfig requestConfig;
     private static final Interceptor DEFAULT_CACHE_CONTROL_INTERCEPTOR;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    public static final MediaType TEXT = MediaType.parse("Content-Type application/x-www-form-");
     private static final MediaType STREAM=MediaType.parse("application/octet-stream");
     private static final HashMap<String,List<Call>> callItems;
     static {
@@ -126,6 +129,9 @@ public class OKHttp3 implements IRequest {
                 params.put(item.param[i],value.toString());
             }
         }
+        if(null!=item.params&&!item.params.isEmpty()){
+            params.putAll(item.params);
+        }
         return call(tag, item, params);
     }
 
@@ -145,12 +151,12 @@ public class OKHttp3 implements IRequest {
 
 
     public Observable<HttpResponse> call(final String tag,final RequestItem item, final HashMap<String,String> params){
-
         return Observable.create(new Observable.OnSubscribe<HttpResponse>() {
             @Override
             public void call(Subscriber<? super HttpResponse> subscriber) {
                 Call call =null;
                 try {
+                    long st = System.currentTimeMillis();
                     final Request request = getRequest(tag, item, params);
                     call = httpClient.newCall(request);
                     List<Call> calls = callItems.get(tag);
@@ -169,6 +175,7 @@ public class OKHttp3 implements IRequest {
                     }
                     //url headers
                     String result = response.body().string();
+                    item.useTime=System.currentTimeMillis()-st;
                     if (response.isSuccessful()) {
                         removeCall(tag,call);
                         httpResponse.result = result;
@@ -201,7 +208,7 @@ public class OKHttp3 implements IRequest {
                         HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
                     }
                 }
-                catch(IOException e){
+                catch(Exception e){
                     //request failed
                     removeCall(tag,call);
                     HttpException exception = new HttpException();
@@ -234,17 +241,18 @@ public class OKHttp3 implements IRequest {
             HashMap<String, String> extraItems = requestConfig.listener.requestExtraItems();
             if(null!=extraItems&&!extraItems.isEmpty()){
                 params.putAll(extraItems);
+                item.params.putAll(extraItems);
             }
         }
-        String requestUrl = getRequestUrl(item);
+        String requestUrl = NetUtils.getRequestUrl(requestConfig,item);
         if(POST.equals(item.method)||PUT.equals(item.method)){
             RequestBody requestBody=null;
             if(null!=item.pathParams){
                 requestUrl=String.format(requestUrl,item.pathParams);
             }
-            if(!TextUtils.isEmpty(item.entity)){
-                requestBody=RequestBody.create(JSON, item.entity);
-                HttpLog.d("POST:"+requestUrl+" Json:\n"+item.entity);
+            if(null!=item.entity&&!TextUtils.isEmpty(item.entity.second)){
+                requestBody=RequestBody.create(MediaType.parse(item.entity.first), item.entity.second);
+                HttpLog.d("POST:"+requestUrl+"\nmediaType:"+item.entity.first+"\nJson:\n"+item.entity);
             } else {
                 MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
                 String formParams=new String();
@@ -283,13 +291,7 @@ public class OKHttp3 implements IRequest {
                 fullUrl.delete(0,fullUrl.length());
                 fullUrl.append(String.format(requestUrl,item.pathParams));
             }
-            if(null!=params){
-                int index=0;
-                int length=params.size();
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    fullUrl.append(entry.getKey() + "=" + entry.getValue() + (index++ == length - 1 ? "" : "&"));
-                }
-            }
+            fullUrl.append(NetUtils.getParamValue(params));
 
             HttpLog.d("Get:" + fullUrl.toString());
             Request.Builder requestBuilder = new Request.Builder().url(fullUrl.toString());
@@ -299,7 +301,7 @@ public class OKHttp3 implements IRequest {
         //add cookie
         if (null!=item.cookies&&!item.cookies.isEmpty()) {
             Request.Builder newBuilder = request.newBuilder();
-            String cookieValue = getCookieValue(item.cookies);
+            String cookieValue = NetUtils.getCookieValue(item.cookies);
             newBuilder.header("Cookie", cookieValue);
             HttpLog.d("Add cookie:" + cookieValue);
             request=newBuilder.build();
@@ -307,32 +309,27 @@ public class OKHttp3 implements IRequest {
         return request;
     }
 
-    private String getCookieValue(HashMap<String,String> cookies) {
-        StringBuilder cookieHeader = new StringBuilder();
-        for(Map.Entry<String,String> entry:cookies.entrySet()){
-            cookieHeader.append(entry.getKey() + '=' + entry.getValue() + "; ");
-        }
-        return cookieHeader.toString();
-    }
+
 
 
     private void initRequestBuild(String tag, RequestItem item, Request.Builder requestBuilder) {
-        //add global header items
         StringBuilder headerBuilder=new StringBuilder();
-        if(null!=requestConfig&&null!=requestConfig.listener){
-            HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
-            if(null!=headerItems){
-                for(Map.Entry<String,String> entry:headerItems.entrySet()){
-                    headerBuilder.append(entry.getKey()+"="+ entry.getValue()+";");
-                    requestBuilder.addHeader(entry.getKey(),entry.getValue());
-                }
-            }
-        }
         //add custom header items
         if(null!=item.headers&&!item.headers.isEmpty()){
             for(Map.Entry<String,String> entry:item.headers.entrySet()){
                 headerBuilder.append(entry.getKey()+"="+ entry.getValue()+";");
                 requestBuilder.addHeader(entry.getKey(),entry.getValue());
+            }
+        }
+        //add global header items
+        if(null!=requestConfig&&null!=requestConfig.listener){
+            HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
+            if(null!=headerItems){
+                item.headers.putAll(headerItems);
+                for(Map.Entry<String,String> entry:headerItems.entrySet()){
+                    headerBuilder.append(entry.getKey() + "=" + entry.getValue() + ";");
+                    requestBuilder.addHeader(entry.getKey(), entry.getValue());
+                }
             }
         }
         if(null!=tag){
@@ -341,15 +338,5 @@ public class OKHttp3 implements IRequest {
         HttpLog.d(item.info+" header:"+headerBuilder.toString());
     }
 
-    private String getRequestUrl(RequestItem item){
-        String absoluteUrl;
-        if(!item.url.startsWith("http")){
-            absoluteUrl=requestConfig.url+item.url;
-        } else if(!TextUtils.isEmpty(item.dynamicUrl)){
-            absoluteUrl=item.dynamicUrl+item.url;
-        } else {
-            absoluteUrl=item.url;
-        }
-        return absoluteUrl;
-    }
+
 }

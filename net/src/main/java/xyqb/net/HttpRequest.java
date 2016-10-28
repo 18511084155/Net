@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import rx.Observable;
 import rx.Subscription;
@@ -31,6 +32,7 @@ import xyqb.net.resultfilter.ResultFilter;
  * Created by cz on 8/23/16.
  */
 public class HttpRequest<T> {
+    public static final String MEDIATYPE_JSON="application/json; charset=utf-8";
     private static final IRequest requester =new OKHttp3();
     private static final HashMap<String,List<Subscription>> subscriptionItems;
     private static Context appContext;
@@ -90,13 +92,30 @@ public class HttpRequest<T> {
         return this;
     }
 
+    public HttpRequest addParams(String name,String value){
+        requestItem.params.put(name,value);
+        return this;
+    }
+
+    public HttpRequest addParams(Map<String,String> params){
+        if(null!=params){
+            requestItem.params.putAll(params);
+        }
+        return this;
+    }
+
     public HttpRequest addPart(String name,File file){
         requestItem.partBody.put(name,file);
         return this;
     }
 
     public HttpRequest addStringEntity(String value){
-        requestItem.entity=value;
+        requestItem.entity=new Pair<>(MEDIATYPE_JSON,value);
+        return this;
+    }
+
+    public HttpRequest addStringEntity(String mediaType,String value){
+        requestItem.entity=new Pair<>(mediaType,value);
         return this;
     }
 
@@ -128,13 +147,8 @@ public class HttpRequest<T> {
                 @Override
                 public void call(RequestItem item) {
                     if(null!=item){
-                        item.dynamicUrl = requestItem.dynamicUrl;
-                        item.headers = requestItem.headers;
-                        item.pathParams=requestItem.pathParams;
-                        item.partBody=requestItem.partBody;
-                        item.entity=requestItem.entity;
-                        item.cookies=requestItem.cookies;
-                        requestItem = item;
+                        item.copy(requestItem);
+                        requestItem=item;
                         request(tag);
                         HttpLog.d("Get request item,call:"+action);
                     } else {
@@ -305,6 +319,13 @@ public class HttpRequest<T> {
             return this;
         }
 
+        public Builder addParams(Map<String,String> params){
+            if(null!=params){
+                requestItem.params.putAll(params);
+            }
+            return this;
+        }
+
         public Builder addHeader(String name,String value){
             requestItem.headers.put(name,value);
             return this;
@@ -321,7 +342,12 @@ public class HttpRequest<T> {
         }
 
         public Builder addStringEntity(String value){
-            requestItem.entity=value;
+            requestItem.entity=new Pair<>(MEDIATYPE_JSON,value);
+            return this;
+        }
+
+        public Builder addStringEntity(String mediaType,String value){
+            requestItem.entity=new Pair<>(mediaType,value);
             return this;
         }
 
