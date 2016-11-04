@@ -84,7 +84,6 @@ public class MainActivity extends Activity {
                     }
                 }).call();
 
-
             }
         });
 

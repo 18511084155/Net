@@ -180,6 +180,7 @@ public class OKHttp3 implements IRequest {
                         removeCall(tag,call);
                         httpResponse.result = result;
                         subscriber.onNext(httpResponse);
+                        subscriber.onCompleted();
                         if(null!=requestConfig.requestResultListener){
                             requestConfig.requestResultListener.onSuccess(httpResponse,item,request.url().toString());
                         }

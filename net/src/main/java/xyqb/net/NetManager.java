@@ -107,9 +107,10 @@ public class NetManager {
                 @Override
                 public void call(Subscriber<? super HashMap<String, RequestItem>> subscriber) {
                     HashMap<String, RequestItem> items = configReader.readerRequestItems();
-                    if(null!=items){
+                    if (null != items) {
                         cacheItems.putAll(items);
                         subscriber.onNext(items);
+                        subscriber.onCompleted();
                     }
                 }
             }).observeOn(AndroidSchedulers.mainThread()).subscribeOn(Schedulers.io()).subscribe(new Action1<HashMap<String, RequestItem>>() {
