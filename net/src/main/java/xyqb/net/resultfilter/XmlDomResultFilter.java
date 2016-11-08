@@ -1,7 +1,7 @@
 package xyqb.net.resultfilter;
 
-import xyqb.xml.XmlElement;
-import xyqb.xml.XmlHelper;
+import xyqb.library.XmlElement;
+import xyqb.library.XmlHelper;
 
 /**
  * Created by cz on 8/23/16.

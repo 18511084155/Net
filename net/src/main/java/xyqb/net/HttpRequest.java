@@ -4,7 +4,6 @@ import android.app.Application;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.text.TextUtils;
 import android.util.Pair;
 
 import java.io.File;
@@ -41,7 +40,6 @@ public class HttpRequest<T> {
     private OnRequestFailedListener failedListener;
     private ResultFilter<T> requestFilter;
     private RequestItem requestItem;
-    private String action;
     private Object[] params;
 
     static {
@@ -62,9 +60,7 @@ public class HttpRequest<T> {
 
 
     public static HttpRequest obtain(String action,final Object...params){
-        HttpRequest httpRequest = new HttpRequest(params);
-        httpRequest.action=action;
-        return httpRequest;
+        return new HttpRequest(action,params);
     }
 
     public HttpRequest url(String url){
@@ -72,9 +68,10 @@ public class HttpRequest<T> {
         return this;
     }
 
-    private HttpRequest(Object... params){
-        this.params=params;
+    private HttpRequest(String action,Object... params){
         requestItem=new RequestItem();
+        requestItem.action=action;
+        this.params=params;
     }
 
     public HttpRequest addHeader(String name,String value){
@@ -142,23 +139,7 @@ public class HttpRequest<T> {
 
     public void call(){
         final String tag=getCallClassTag();
-        if(!TextUtils.isEmpty(action)){
-            NetManager.getInstance().requestItem(action, new Action1<RequestItem>() {
-                @Override
-                public void call(RequestItem item) {
-                    if(null!=item){
-                        item.copy(requestItem);
-                        requestItem=item;
-                        request(tag);
-                        HttpLog.d("Get request item,call:"+action);
-                    } else {
-                        HttpLog.d("Not config action:"+action+",please check!");
-                    }
-                }
-            });
-        } else {
-            request(tag);
-        }
+        request(tag);
     }
 
     private  String getCallClassTag() {
@@ -214,7 +195,6 @@ public class HttpRequest<T> {
     }
 
     private void request(String tag) {
-        ensureRequestItem(requestItem);
         Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
         if(isEnableNetWork()){
             Subscription subscribe = observable.map(new Func1<HttpResponse, Pair<HttpResponse, T>>() {
@@ -287,16 +267,6 @@ public class HttpRequest<T> {
         }
     }
 
-    private void ensureRequestItem(RequestItem item){
-        if(null==item){
-            throw new NullPointerException("request item is null!");
-        } else if(TextUtils.isEmpty(item.url)){
-            throw new NullPointerException("request url is null!");
-        } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)&&!"put".equals(item.method)){
-            throw new IllegalArgumentException("http request method error,not get post or put!");
-        }
-    }
-
     public static class Builder{
         private RequestItem requestItem;
 
@@ -352,7 +322,7 @@ public class HttpRequest<T> {
         }
 
         public HttpRequest build(){
-            HttpRequest httpRequest = new HttpRequest();
+            HttpRequest httpRequest = new HttpRequest(null);
             httpRequest.requestItem=requestItem;
             return httpRequest;
         }

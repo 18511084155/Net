@@ -44,6 +44,10 @@ public class NetUtils {
     }
 
     public static String getRequestUrl(RequestConfig config,RequestItem item){
+        //此设计在应用requestItem之前,可以全局拦截,修改信息
+        if(null!=config.applyListener){
+            config.applyListener.onApplyItem(item);
+        }
         String absoluteUrl;
         if(!item.url.startsWith("http")){
             absoluteUrl=config.url+item.url;

@@ -2,6 +2,7 @@ package xyqb.net.model;
 
 import java.io.File;
 
+import xyqb.net.callback.OnApplyRequestItemListener;
 import xyqb.net.callback.OnRequestListener;
 import xyqb.net.callback.OnRequestResultListener;
 
@@ -19,6 +20,7 @@ public class RequestConfig {
     public long maxCacheSize;
     public boolean retryOnConnectionFailure;
     public OnRequestListener listener;
+    public OnApplyRequestItemListener applyListener;
     public OnRequestResultListener requestResultListener;
 
     public RequestConfig() {

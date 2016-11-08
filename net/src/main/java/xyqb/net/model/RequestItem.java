@@ -42,13 +42,4 @@ public class RequestItem {
         this.partBody=new HashMap<>();
     }
 
-    public void copy(RequestItem item){
-        dynamicUrl = item.dynamicUrl;
-        headers = item.headers;
-        pathParams=item.pathParams;
-        partBody=item.partBody;
-        entity=item.entity;
-        cookies=item.cookies;
-        params=item.params;
-    }
 }

@@ -35,6 +35,8 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
+import xyqb.library.XmlElement;
+import xyqb.library.config.XmlReaderBase;
 import xyqb.net.IRequest;
 import xyqb.net.NetManager;
 import xyqb.net.exception.HttpException;
@@ -44,6 +46,9 @@ import xyqb.net.model.RequestConfig;
 import xyqb.net.model.RequestItem;
 import xyqb.net.resultfilter.JsonParamsResultFilter;
 import xyqb.net.util.NetUtils;
+import xyqb.net.xml.RequestConfigReader;
+
+import static android.R.attr.action;
 
 
 /**
@@ -57,9 +62,15 @@ public class OKHttp3 implements IRequest {
     public static final MediaType TEXT = MediaType.parse("Content-Type application/x-www-form-");
     private static final MediaType STREAM=MediaType.parse("application/octet-stream");
     private static final HashMap<String,List<Call>> callItems;
+    private static final HashMap<String,RequestItem> cacheItems;
+    private static final RequestConfigReader configReader;
+
     static {
         callItems=new HashMap<>();
+        cacheItems=new HashMap<>();
+        configReader=new RequestConfigReader();
         requestConfig = NetManager.getInstance().getRequestConfig();
+
         DEFAULT_CACHE_CONTROL_INTERCEPTOR = new Interceptor() {
             @Override
             public Response intercept(Chain chain) throws IOException {
@@ -121,6 +132,7 @@ public class OKHttp3 implements IRequest {
 
     @Override
     public Observable<HttpResponse> call(String tag,final RequestItem item,final Object... values) {
+        ensureRequestItems(item);
         final HashMap<String,String> params=new HashMap<>();
         int length=Math.min(null==item.param?0:item.param.length, values.length);
         for(int i=0;i<length;i++){
@@ -132,7 +144,7 @@ public class OKHttp3 implements IRequest {
         if(null!=item.params&&!item.params.isEmpty()){
             params.putAll(item.params);
         }
-        return call(tag, item, params);
+        return call(tag,item, params);
     }
 
     @Override
@@ -155,6 +167,10 @@ public class OKHttp3 implements IRequest {
             @Override
             public void call(Subscriber<? super HttpResponse> subscriber) {
                 Call call =null;
+                String result=null;
+                String requestUrl=null;
+                boolean isSuccessful=false;
+                Map<String,String> headerItems=new HashMap<>();
                 try {
                     long st = System.currentTimeMillis();
                     final Request request = getRequest(tag, item, params);
@@ -166,50 +182,18 @@ public class OKHttp3 implements IRequest {
                     calls.add(call);
                     Response response = call.execute();
                     Headers headers = request.headers();
-                    HttpResponse httpResponse = new HttpResponse();
                     if (null != headers&&0<headers.size()) {
                         Set<String> names = headers.names();
                         for (String item : names) {
-                            httpResponse.headers.put(item, headers.get(item));
+                            headerItems.put(item, headers.get(item));
                         }
                     }
                     //url headers
-                    String result = response.body().string();
+                    result = response.body().string();
+                    requestUrl=request.url().toString();
+                    isSuccessful=response.isSuccessful();
                     item.useTime=System.currentTimeMillis()-st;
-                    if (response.isSuccessful()) {
-                        removeCall(tag,call);
-                        httpResponse.result = result;
-                        subscriber.onNext(httpResponse);
-                        subscriber.onCompleted();
-                        if(null!=requestConfig.requestResultListener){
-                            requestConfig.requestResultListener.onSuccess(httpResponse,item,request.url().toString());
-                        }
-                        HttpLog.d("Request success:"+item.info);
-                    }else{
-                        //request success but content is fail
-                        removeCall(tag,call);
-                        HashMap<String, String> params = new JsonParamsResultFilter().result(result);
-                        HttpException exception = new HttpException();
-                        String codeValue = params.get("code");
-                        if(!TextUtils.isEmpty(codeValue)){
-                            exception.code = Integer.valueOf(codeValue);
-                        } else {
-                            exception.code=IRequest.REQUEST_NO_CODE;
-                        }
-                        exception.message = params.get("message");
-                        exception.headers = httpResponse.headers;
-                        if(!params.isEmpty()){
-                            exception.params.putAll(params);
-                        }
-                        exception.result = result;
-                        if(null!=requestConfig.requestResultListener){
-                            requestConfig.requestResultListener.onFailed(exception, item, request.url().toString());
-                        }
-                        subscriber.onError(exception);
-                        HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
-                    }
-                }
-                catch(Exception e){
+                } catch(Exception e){
                     //request failed
                     removeCall(tag,call);
                     HttpException exception = new HttpException();
@@ -219,10 +203,83 @@ public class OKHttp3 implements IRequest {
                         requestConfig.requestResultListener.onFailed(exception,item,item.url);
                     }
                     subscriber.onError(exception);
-                    HttpLog.d("Request failed:"+item.info+"\nError:"+e.getMessage());
+                    HttpLog.d("Request error failed:"+item.info+"\nError:"+e.getMessage());
+                }
+                removeCall(tag,call);
+                HttpResponse httpResponse=new HttpResponse();
+                if (isSuccessful) {
+                    httpResponse.result = result;
+                    subscriber.onNext(httpResponse);
+                    if(null!=requestConfig.requestResultListener){
+                        requestConfig.requestResultListener.onSuccess(httpResponse,item,requestUrl);
+                    }
+                    HttpLog.d("Request success:"+item.info);
+                }else{
+                    //request success but content is fail
+                    HashMap<String, String> params = new JsonParamsResultFilter().result(result);
+                    HttpException exception = new HttpException();
+                    String codeValue = params.get("code");
+                    if(!TextUtils.isEmpty(codeValue)){
+                        exception.code = Integer.valueOf(codeValue);
+                    } else {
+                        exception.code=IRequest.REQUEST_NO_CODE;
+                    }
+                    exception.message = params.get("message");
+                    exception.headers = httpResponse.headers;
+                    if(!params.isEmpty()){
+                        exception.params.putAll(params);
+                    }
+                    exception.result = result;
+                    if(null!=requestConfig.requestResultListener){
+                        requestConfig.requestResultListener.onFailed(exception, item,requestUrl);
+                    }
+                    subscriber.onError(exception);
+                    HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
+                }
+                subscriber.onCompleted();
+            }
+
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
+    }
+
+    /**
+     * ensure request item,run on thread
+     * @param item
+     */
+    private void ensureRequestItems(RequestItem item) {
+        //ensure xml config item
+        if(!TextUtils.isEmpty(item.action)){
+            if(cacheItems.isEmpty()){
+                XmlElement rootElement =null;
+                if(!TextUtils.isEmpty(requestConfig.path)){
+                    rootElement = configReader.readXmlElement(XmlReaderBase.ASSET_XML, requestConfig.path);
+                } else if(!TextUtils.isEmpty(requestConfig.rawName)){
+                    rootElement = configReader.readXmlElement(XmlReaderBase.RAW_XML, requestConfig.rawName);
+                }
+                if(null!=rootElement){
+                    HashMap<String, RequestItem> items = configReader.readXmlConfig(rootElement);
+                    if(null!=items&&!items.isEmpty()){
+                        cacheItems.clear();
+                        cacheItems.putAll(items);
+                    }
                 }
             }
-        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread());
+            RequestItem requestItem = cacheItems.get(item.action);
+            if(null!=requestItem){
+                item.method=requestItem.method;
+                item.param=requestItem.param;
+                item.url=requestItem.url;
+                item.info=requestItem.info;
+                HttpLog.d("Get request item,call:"+action);
+            } else {
+                HttpLog.d("Not config action:"+action+",please check!");
+            }
+        }
+        if(TextUtils.isEmpty(item.url)){
+            throw new NullPointerException("request url is null!");
+        } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)&&!"put".equals(item.method)){
+            throw new IllegalArgumentException("http request method error,not get post or put!");
+        }
     }
 
     private void removeCall(String tag,Call call) {
