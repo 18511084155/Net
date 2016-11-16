@@ -154,7 +154,7 @@ public class OKHttp3 implements IRequest {
             for(Iterator<Call> iterator=callsItem.iterator();iterator.hasNext();){
                 Call call = iterator.next();
                 iterator.remove();
-                if(!call.isCanceled()){
+                if(null!=call&&!call.isCanceled()){
                     call.cancel();
                 }
             }
