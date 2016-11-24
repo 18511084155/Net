@@ -142,6 +142,11 @@ public class HttpRequest<T> {
         request(tag);
     }
 
+    public Observable<HttpResponse> subscribe(){
+        final String tag=getCallClassTag();
+        return requester.call(tag, requestItem, params);
+    }
+
     private  String getCallClassTag() {
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         int length = stackTrace.length;
@@ -195,8 +200,8 @@ public class HttpRequest<T> {
     }
 
     private void request(String tag) {
-        Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
         if(isEnableNetWork()){
+            Observable<HttpResponse> observable = requester.call(tag, requestItem, params);
             Subscription subscribe = observable.map(new Func1<HttpResponse, Pair<HttpResponse, T>>() {
                 @Override
                 public Pair<HttpResponse, T> call(HttpResponse response) {
