@@ -258,19 +258,23 @@ public class HttpRequest<T> {
     }
 
     public static void cancel(Object object){
-        String tag = object.getClass().getName();
-        requester.cancel(tag);
-        List<Subscription> subscriptions = subscriptionItems.get(tag);
-        if(null!=subscriptions){
-            for(Iterator<Subscription> iterator=subscriptions.iterator();iterator.hasNext();){
-                Subscription subscription = iterator.next();
-                iterator.remove();
-                if(subscription.isUnsubscribed()){
-                    subscription.unsubscribe();
+        if(null!=object){
+            String tag = object.getClass().getName();
+            requester.cancel(tag);
+            List<Subscription> subscriptions = subscriptionItems.get(tag);
+            if(null!=subscriptions){
+                for(Iterator<Subscription> iterator=subscriptions.iterator();iterator.hasNext();){
+                    Subscription subscription = iterator.next();
+                    iterator.remove();
+                    if(subscription.isUnsubscribed()){
+                        subscription.unsubscribe();
+                    }
                 }
             }
         }
     }
+
+
 
     public static class Builder{
         private RequestItem requestItem;

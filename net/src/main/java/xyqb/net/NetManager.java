@@ -3,6 +3,7 @@ package xyqb.net;
 import java.io.File;
 
 import xyqb.net.callback.OnApplyRequestItemListener;
+import xyqb.net.callback.OnPrintHttpLogListener;
 import xyqb.net.callback.OnRequestListener;
 import xyqb.net.callback.OnRequestResultListener;
 import xyqb.net.log.HttpLog;
@@ -39,11 +40,6 @@ public class NetManager {
 
     public NetManager setRequestUrl(String url){
         requestConfig.url=url;
-        return this;
-    }
-
-    public NetManager setHttpDebug(boolean debug){
-        HttpLog.setHttpDebug(debug);
         return this;
     }
 
@@ -89,6 +85,16 @@ public class NetManager {
 
     public NetManager setOnRequestResultListener(OnRequestResultListener requestResultListener){
         this.requestConfig.requestResultListener=requestResultListener;
+        return this;
+    }
+
+    public NetManager setDebug(boolean debug){
+        HttpLog.setDebug(debug);
+        return this;
+    }
+
+    public NetManager setOnPrintHttpLogListener(OnPrintHttpLogListener listener){
+        HttpLog.setPrintHttpLogListener(listener);
         return this;
     }
 
