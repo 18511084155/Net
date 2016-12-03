@@ -208,7 +208,7 @@ public class HttpRequest<T> {
                     T t;
                     if (null != requestFilter) {
                         t = requestFilter.result(response.result);
-                        HttpLog.d("Result filter complete, The object is:" + t);
+                        HttpLog.d("Result filter complete:"+requestItem.info+" The object is:" + t);
                     } else {
                         t = (T) response.result;
                     }
@@ -270,6 +270,7 @@ public class HttpRequest<T> {
                         subscription.unsubscribe();
                     }
                 }
+                HttpLog.d("Request cancel subscription:"+tag);
             }
         }
     }

@@ -48,7 +48,6 @@ import xyqb.net.resultfilter.JsonParamsResultFilter;
 import xyqb.net.util.NetUtils;
 import xyqb.net.xml.RequestConfigReader;
 
-import static android.R.attr.action;
 
 
 /**
@@ -150,14 +149,18 @@ public class OKHttp3 implements IRequest {
     @Override
     public void cancel(String tag) {
         List<Call> callsItem = callItems.get(tag);
+        HttpLog.d("Request cancel:"+tag+" count:"+(null==callsItem?0:callsItem.size()));
         if(null!=callsItem){
+            StringBuilder builder=new StringBuilder();
             for(Iterator<Call> iterator=callsItem.iterator();iterator.hasNext();){
                 Call call = iterator.next();
                 iterator.remove();
+                builder.append("Call:"+call.isExecuted()+" isCanceled:"+call.isCanceled()+":"+call.toString()+"<#>");
                 if(null!=call&&!call.isCanceled()){
                     call.cancel();
                 }
             }
+            HttpLog.d("Request cancel-result:"+tag+" "+builder.toString());
         }
     }
 
@@ -170,6 +173,7 @@ public class OKHttp3 implements IRequest {
                 String result=null;
                 String requestUrl=null;
                 boolean isSuccessful=false;
+                boolean requestFail=false;
                 Map<String,String> headerItems=new HashMap<>();
                 try {
                     long st = System.currentTimeMillis();
@@ -195,6 +199,7 @@ public class OKHttp3 implements IRequest {
                     item.useTime=System.currentTimeMillis()-st;
                 } catch(Exception e){
                     //request failed
+                    requestFail=true;
                     removeCall(tag,call);
                     HttpException exception = new HttpException();
                     exception.code = IRequest.REQUEST_ERROR;
@@ -203,7 +208,7 @@ public class OKHttp3 implements IRequest {
                         requestConfig.requestResultListener.onFailed(exception,item,item.url);
                     }
                     subscriber.onError(exception);
-                    HttpLog.d("Request error failed:"+item.info+"\nError:"+e.getMessage());
+                    HttpLog.d("Request error:"+item.info+" Error:"+e.getMessage());
                 }
                 removeCall(tag,call);
                 HttpResponse httpResponse=new HttpResponse();
@@ -214,7 +219,7 @@ public class OKHttp3 implements IRequest {
                         requestConfig.requestResultListener.onSuccess(httpResponse,item,requestUrl);
                     }
                     HttpLog.d("Request success:"+item.info);
-                }else{
+                }else if(!requestFail){
                     //request success but content is fail
                     HashMap<String, String> params = new JsonParamsResultFilter().result(result);
                     HttpException exception = new HttpException();
@@ -270,14 +275,16 @@ public class OKHttp3 implements IRequest {
                 item.param=requestItem.param;
                 item.url=requestItem.url;
                 item.info=requestItem.info;
-                HttpLog.d("Get request item,call:"+action);
+                HttpLog.d("Get request item,action:"+item.info);
             } else {
-                HttpLog.d("Not config action:"+action+",please check!");
+                HttpLog.d("Request failed: Not config action "+item.info+",please check!");
             }
         }
         if(TextUtils.isEmpty(item.url)){
+            HttpLog.d("Request failed: request url is null!");
             throw new NullPointerException("request url is null!");
         } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)&&!"put".equals(item.method)){
+            HttpLog.d("Request failed: http request method error,not get post or put!");
             throw new IllegalArgumentException("http request method error,not get post or put!");
         }
     }
@@ -310,7 +317,7 @@ public class OKHttp3 implements IRequest {
             }
             if(null!=item.entity&&!TextUtils.isEmpty(item.entity.second)){
                 requestBody=RequestBody.create(MediaType.parse(item.entity.first), item.entity.second);
-                HttpLog.d("POST:"+requestUrl+"\nmediaType:"+item.entity.first+"\nJson:\n"+item.entity);
+                HttpLog.d("Request entity:"+requestUrl+"\nmediaType:"+item.entity.first+"\nJson:\n"+item.entity);
             } else {
                 MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
                 String formParams=new String();
@@ -325,14 +332,13 @@ public class OKHttp3 implements IRequest {
                         String name = entry.getKey();
                         File file = entry.getValue();
                         if(!TextUtils.isEmpty(name)&&null!=file&&file.exists()){
-                            HttpLog.d("POST:"+requestUrl+" File:\n"+file.getAbsolutePath());
                             requestBody=RequestBody.create(STREAM, file);
                             builder.addFormDataPart(name,file.getName(),requestBody);
                         }
                     }
                 }
                 requestBody=builder.build();
-                HttpLog.d(item.method+":"+requestUrl+" FROM:\n"+formParams);
+                HttpLog.d("Send Request:"+item.info+" Method:"+item.method+":"+requestUrl+" From:\n"+formParams);
             }
 
             Request.Builder requestBuilder = new Request.Builder().url(requestUrl);
@@ -361,7 +367,7 @@ public class OKHttp3 implements IRequest {
             Request.Builder newBuilder = request.newBuilder();
             String cookieValue = NetUtils.getCookieValue(item.cookies);
             newBuilder.header("Cookie", cookieValue);
-            HttpLog.d("Add cookie:" + cookieValue);
+            HttpLog.d("Request add cookie:" + cookieValue);
             request=newBuilder.build();
         }
         return request;
