@@ -232,12 +232,12 @@ public class HttpRequest<T> {
                         HttpException exception;
                         if (throwable instanceof HttpException) {
                             exception = (HttpException) throwable;
-                            HttpLog.d("Request failed code:" + exception.code + " message:\n" + exception.message);
+                            HttpLog.d("Request operate failed:"+requestItem.info+" code:" + exception.code + " message:\n" + exception.message);
                         } else {
                             exception = new HttpException();
                             exception.message = throwable.getMessage();
                             exception.code = IRequest.REQUEST_ERROR;
-                            HttpLog.d("Request failed:\n" + exception.getMessage());
+                            HttpLog.d("Request operate failed:"+requestItem.info+" message" + exception.getMessage());
                         }
                         failedListener.onFailed(exception.code, exception);
                     }
@@ -252,7 +252,7 @@ public class HttpRequest<T> {
             HttpException exception=new HttpException();
             exception.code=IRequest.REQUEST_NO_NETWORK;
             exception.message="Request no network!";
-            HttpLog.d("Request failed:\n"+exception.getMessage());
+            HttpLog.d("Request failed:"+requestItem.info+" message:"+exception.getMessage());
             failedListener.onFailed(exception.code, exception);
         }
     }
@@ -270,7 +270,7 @@ public class HttpRequest<T> {
                         subscription.unsubscribe();
                     }
                 }
-                HttpLog.d("Request cancel subscription:"+tag);
+                HttpLog.d("Request cancel subscription:"+tag+" count:"+subscriptions.size());
             }
         }
     }

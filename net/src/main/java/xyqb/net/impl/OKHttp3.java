@@ -239,7 +239,7 @@ public class OKHttp3 implements IRequest {
                         requestConfig.requestResultListener.onFailed(exception, item,requestUrl);
                     }
                     subscriber.onError(exception);
-                    HttpLog.d("Request failed:"+item.info+"\nMessage:"+exception.message+" code:"+exception.code);
+                    HttpLog.d("Request failed:"+item.info+" Message:"+exception.message+" code:"+exception.code);
                 }
                 subscriber.onCompleted();
             }
@@ -281,10 +281,10 @@ public class OKHttp3 implements IRequest {
             }
         }
         if(TextUtils.isEmpty(item.url)){
-            HttpLog.d("Request failed: request url is null!");
+            HttpLog.d("Request failed:request url is null!");
             throw new NullPointerException("request url is null!");
         } else if(!(TextUtils.isEmpty(item.method)||"get".equals(item.method))&&!"post".equals(item.method)&&!"put".equals(item.method)){
-            HttpLog.d("Request failed: http request method error,not get post or put!");
+            HttpLog.d("Request failed:http request method error,not get post or put!");
             throw new IllegalArgumentException("http request method error,not get post or put!");
         }
     }
