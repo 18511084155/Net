@@ -10,7 +10,7 @@ import java.util.Iterator;
 /**
  * Created by cz on 8/23/16.
  */
-public class JsonParamsResultFilter extends ResultFilter<HashMap<String,String>> {
+public class JsonParamsResultFilter extends ResultFilter {
 
     @Override
     public HashMap<String, String> result(String result) {

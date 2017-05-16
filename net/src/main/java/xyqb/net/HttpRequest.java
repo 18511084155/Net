@@ -36,7 +36,7 @@ public class HttpRequest<T> {
     private static final HashMap<String,List<Subscription>> subscriptionItems;
     private static Context appContext;
     private OnResultCacheListener resultCacheListener;
-    private OnRequestSuccessListener successListener;
+    private OnRequestSuccessListener<T> successListener;
     private OnRequestFailedListener failedListener;
     private ResultFilter<T> requestFilter;
     private RequestItem requestItem;
@@ -205,7 +205,7 @@ public class HttpRequest<T> {
             Subscription subscribe = observable.map(new Func1<HttpResponse, Pair<HttpResponse, T>>() {
                 @Override
                 public Pair<HttpResponse, T> call(HttpResponse response) {
-                    T t;
+                    T t=null;
                     if (null != requestFilter) {
                         t = requestFilter.result(response.result);
                         HttpLog.d("Result filter complete:"+requestItem.info+" The object is:" + t);

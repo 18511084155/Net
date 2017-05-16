@@ -2,7 +2,6 @@ package xyqb.netmanager;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -10,14 +9,6 @@ import android.widget.TextView;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-
-import xyqb.net.HttpRequest;
-import xyqb.net.callback.OnRequestFailedListener;
-import xyqb.net.callback.OnRequestSuccessListener;
-import xyqb.net.exception.HttpException;
-import xyqb.net.model.HttpResponse;
-import xyqb.net.resultfilter.JsonParamsResultFilter;
 
 public class MainActivity extends Activity {
 
@@ -49,40 +40,6 @@ public class MainActivity extends Activity {
 //                        content.setText(e.getMessage());
 //                    }
 //                }).call();
-
-                // APP ID
-                final String APP_ID = "0002";
-                // APP KEY
-                final String APP_KEY = "lkb010203#$%";
-                //post
-                String timeStamp = String.valueOf(System.currentTimeMillis());
-                String tokenValue=md5((new StringBuffer()
-                        .append("timeunit=").append(timeStamp)
-                        .append("appkey=").append(APP_KEY)).toString());
-
-
-
-                String userId="15101604692";
-                String feedbackValue="abcdefghikjlmn";
-                String token="0039615f-0bdf-4f8e-9851-6c99c89b224f";
-                HttpRequest.obtain(NetConfig.USER_SUGGESTION, userId, feedbackValue, userId, userId, APP_ID, timeStamp, tokenValue).
-                        addHeader("X-Auth-Token", token).
-                        addHeader("X-Requested-With", "XMLHttpRequest").
-                        addHeader("Content-Type", "application/json").
-                        setResultFilter(new JsonParamsResultFilter()).
-                        setOnRequestSuccessListener(new OnRequestSuccessListener<HashMap<String, String>>() {
-                            @Override
-                            public void onSuccess(HttpResponse result, HashMap<String, String> params) {
-                                Log.e(TAG, result.result);
-                                content.setText(result.result);
-                            }
-                        }).setOnRequestFailedListener(new OnRequestFailedListener() {
-                    @Override
-                    public void onFailed(int code, HttpException e) {
-                        Log.e(TAG,e.getMessage());
-                        content.setText(e.getMessage());
-                    }
-                }).call();
 
             }
         });
