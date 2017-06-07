@@ -1,0 +1,14 @@
+package cz.netlibrary.request
+
+import cz.netlibrary.model.RequestMethod
+
+/**
+ * Created by cz on 2017/6/7.
+ */
+class GetRequest{
+    var method=RequestMethod.get
+    var info:String?=null
+    var url:String=String()
+    var params= mutableListOf<Pair<String,String>>()
+    var header= mutableListOf<Pair<String,String>>()
+}
