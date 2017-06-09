@@ -10,21 +10,18 @@ class Main2Activity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main2)
-        request<Boolean>(NetWorkPrefs.action1) {
+        request<String>(NetWorkPrefs.action1) {
             mainThread=true
             post {
                 url="login/"
             }
-            map{ it as Boolean}
-
+            map{ it }
             success {
 
             }
-
             failed {
 
             }
-
             noNetWork {
 
             }

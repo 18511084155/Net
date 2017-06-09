@@ -13,10 +13,9 @@ class RequestBuilder<T>{
     //线程调度
     var mainThread=true
     //检测上下文
-    var contextCondition=true
+    var contextDetection =true
     //请求生命周期
     var lifeCycle: LifeCycleCallback?=null
-
     //配置一个get请求信息
     inline fun get(closure: GetRequest.() -> Unit){
         val request = GetRequest().apply(closure)

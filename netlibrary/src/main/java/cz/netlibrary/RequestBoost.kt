@@ -10,11 +10,9 @@ import android.support.v4.app.Fragment
 import cz.netlibrary.configradtion.HttpRequestConfig
 import cz.netlibrary.impl.BaseRequestClient
 import cz.netlibrary.model.Configuration
-import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestItem
 import cz.netlibrary.request.RequestBuilder
 import cz.netlibrary.request.RequestClient
-import cz.netlibrary.request.RequestHandler
 
 /**
  * Created by cz on 2017/6/7.
@@ -25,39 +23,35 @@ fun Application.init(closure: HttpRequestConfig.()->Unit){
     BaseRequestClient.requestConfig = HttpRequestConfig().apply(closure)
 }
 
-fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Pair<RequestConfig, RequestHandler<T>> {
+fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): RequestBuilder<T> {
     var requestItem: RequestItem? =null
     if(null!=action){
         requestItem = Configuration[action]
     }
     val requestBuilder = RequestBuilder<T>().apply(request)
-    val config = requestBuilder.config
-    val handler = requestBuilder.handler
-    handler.mainThread=requestBuilder.mainThread
-    handler.contextCondition=requestBuilder.contextCondition
     if(null!=requestItem){
         //请求网络
-        config.info=requestItem.info
-        config.url=requestItem.url
-        config.method=requestItem.method
-        config.info=requestItem.info
-        config.templateName=requestItem.params
-        config.pathValues.addAll(requestItem.pathValues)
+        requestBuilder.config.info=requestItem.info
+        requestBuilder.config.url=requestItem.url
+        requestBuilder.config.method=requestItem.method
+        requestBuilder.config.info=requestItem.info
+        requestBuilder.config.templateName=requestItem.params
+        requestBuilder.config.pathValues.addAll(requestItem.pathValues)
     }
-    return config.to(handler)
+    return requestBuilder
 }
 
 /**
  * activity
  */
 fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this), item, handler){
+    val item = getRequestItem(action, request)
+    RequestClient.request(getAnyTag(tag,this),item){
         val condition=if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1)
             !isFinishing
          else
             !isFinishing||!isDestroyed
-        !handler.contextCondition||condition
+        !item.contextDetection ||condition
     }
 }
 
@@ -76,8 +70,8 @@ fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  * v4 fragment
  */
 fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this), item, handler){ !handler.contextCondition||!isDetached&&null!=view?.windowToken }
+    val item = getRequestItem(action, request)
+    RequestClient.request(getAnyTag(tag,this),item){ !item.contextDetection ||!isDetached&&null!=view?.windowToken }
 }
 
 fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
@@ -94,8 +88,8 @@ fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  * v4 dialogFragment
  */
 fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this), item, handler){!handler.contextCondition||!isDetached&&null!=view?.windowToken}
+    val item = getRequestItem(action, request)
+    RequestClient.request(getAnyTag(tag,this), item){!item.contextDetection ||!isDetached&&null!=view?.windowToken}
 }
 
 fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)

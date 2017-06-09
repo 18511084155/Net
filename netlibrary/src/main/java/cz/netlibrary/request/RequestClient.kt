@@ -5,7 +5,6 @@ import android.os.Looper
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.impl.OkHttp3ClientImpl
-import cz.netlibrary.model.RequestConfig
 import okhttp3.Response
 
 /**
@@ -15,22 +14,26 @@ import okhttp3.Response
 object RequestClient{
     val client= OkHttp3ClientImpl()
 
-    fun<T> request(tag:String,item:RequestConfig,handler: RequestHandler<T>,contextCondition:()->Boolean){
-        handler.lifeCycle?.call(RequestLifeCycle.START)
-        client.call(tag,item,object:RequestCallback<Response> {
+    fun<T> request(tag:String, requestBuilder: RequestBuilder<T>, contextCondition:()->Boolean){
+        val config=requestBuilder.config
+        val lifeCycle=requestBuilder.lifeCycle
+        val mainThread=requestBuilder.mainThread
+        val handler=requestBuilder.handler
+        lifeCycle?.call(RequestLifeCycle.START)
+        client.call(tag,config,object:RequestCallback<Response> {
             override fun onSuccess(response: Response, code: Int, result: String, time: Long) {
                 if(contextCondition.invoke()){
-                    handler.lifeCycle?.call(RequestLifeCycle.BEFORE_CALL)
+                    lifeCycle?.call(RequestLifeCycle.BEFORE_CALL)
                     val item = handler.map.invoke(result)
                     //回调处理结果
                     if(contextCondition.invoke()){
-                        if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
+                        if(mainThread&&ContextHelper.mainThread==Thread.currentThread()){
                             item?.let { handler.success.invoke(it) }
-                            handler.lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
+                            lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
                         } else {
                             ContextHelper.handler.post {
                                 item?.let { handler.success.invoke(it) }
-                                handler.lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
+                                lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
                             }
                         }
                     }
@@ -40,14 +43,14 @@ object RequestClient{
             override fun onFailed(exception: HttpException) {
                 if(contextCondition.invoke()){
                     //回调异常结果
-                    handler.lifeCycle?.call(RequestLifeCycle.BEFORE_FAILED)
-                    if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
-                        item?.let { handler.failed.invoke(exception) }
-                        handler.lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
+                    lifeCycle?.call(RequestLifeCycle.BEFORE_FAILED)
+                    if(mainThread&&ContextHelper.mainThread==Thread.currentThread()){
+                        handler.failed.invoke(exception)
+                        lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
                     } else {
                         ContextHelper.handler.post {
-                            item?.let { handler.failed.invoke(exception) }
-                            handler.lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
+                            handler.failed.invoke(exception)
+                            lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
                         }
                     }
                 }
