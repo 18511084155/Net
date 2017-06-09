@@ -1,5 +1,6 @@
 package cz.netlibrary.request
 
+import cz.netlibrary.callback.LifeCycleCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.model.RequestConfig
 
@@ -11,11 +12,11 @@ class RequestBuilder<T>{
     val handler=RequestHandler<T>()
     //线程调度
     var mainThread=true
-    //配置模板取值
-    inline fun value(closure:()->List<Any>){
-        val valueItems = closure.invoke()
-        config.templateValue.addAll(valueItems)
-    }
+    //检测上下文
+    var contextCondition=true
+    //请求生命周期
+    var lifeCycle: LifeCycleCallback?=null
+
     //配置一个get请求信息
     inline fun get(closure: GetRequest.() -> Unit){
         val request = GetRequest().apply(closure)
@@ -24,7 +25,6 @@ class RequestBuilder<T>{
         config.method=request.method
         config.params.addAll(request.params)
         config.header.addAll(request.header)
-        config.init=true
     }
 
     //配置一个post请求信息
@@ -37,7 +37,6 @@ class RequestBuilder<T>{
         config.params.addAll(request.params)
         config.header.addAll(request.header)
         config.partItems.addAll(request.partItems)
-        config.init=true
     }
 
     //过滤信息

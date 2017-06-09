@@ -17,7 +17,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
     val TEXT = MediaType.parse("Content-Type application/x-www-form-")
     val STREAM = MediaType.parse("application/octet-stream")
 
-    val callItems= mutableMapOf<String,Call>()
+    val callItems= mutableMapOf<String,MutableList<Call>>()
     override fun call(tag: String, item: RequestConfig,callback:RequestCallback<Response>?) {
         var call:Call?
         val st = System.currentTimeMillis()
@@ -47,15 +47,18 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             call=null
             callback?.onFailed(HttpException(-1,e.message))
         }
-        call?.let { callItems.put(tag,it) }
+        call?.let {
+            if(null==callItems[tag]){
+                callItems[tag]= mutableListOf()
+            }
+            callItems[tag]?.add(it)
+        }
     }
 
     override fun cancel(tag: String) {
         try{
-            val call=callItems.remove(tag)
-            if(null!=call&&!call.isCanceled){
-                call.cancel()
-            }
+            val items=callItems.remove(tag)
+            items?.let { it.forEach { if(!it.isCanceled)it.cancel() } }
         } catch (e:Exception){ }
     }
 

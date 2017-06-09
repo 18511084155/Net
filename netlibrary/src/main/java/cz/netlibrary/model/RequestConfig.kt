@@ -17,6 +17,4 @@ class RequestConfig{
     var params= mutableListOf<Pair<String,String>>()
     var header= mutableListOf<Pair<String,String>>()
     var partItems= mutableListOf<Pair<String, File>>()
-
-    var init:Boolean=false//是否初始化
 }

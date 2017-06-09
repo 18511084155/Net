@@ -15,28 +15,50 @@ import okhttp3.Response
 object RequestClient{
     val client= OkHttp3ClientImpl()
 
-    fun<T> request(tag:String,item:RequestConfig,handler: RequestHandler<T>){
+    fun<T> request(tag:String,item:RequestConfig,handler: RequestHandler<T>,contextCondition:()->Boolean){
+        handler.lifeCycle?.call(RequestLifeCycle.START)
         client.call(tag,item,object:RequestCallback<Response> {
-            override fun onSuccess(t: Response, code: Int, result: String, time: Long) {
-                val item = handler.map.invoke(result)
-                //回调处理结果
-                if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
-                    item?.let { handler.success.invoke(it) }
-                } else {
-                    ContextHelper.handler.post { item?.let { handler.success.invoke(it) } }
+            override fun onSuccess(response: Response, code: Int, result: String, time: Long) {
+                if(contextCondition.invoke()){
+                    handler.lifeCycle?.call(RequestLifeCycle.BEFORE_CALL)
+                    val item = handler.map.invoke(result)
+                    //回调处理结果
+                    if(contextCondition.invoke()){
+                        if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
+                            item?.let { handler.success.invoke(it) }
+                            handler.lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
+                        } else {
+                            ContextHelper.handler.post {
+                                item?.let { handler.success.invoke(it) }
+                                handler.lifeCycle?.call(RequestLifeCycle.AFTER_CALL)
+                            }
+                        }
+                    }
                 }
             }
 
             override fun onFailed(exception: HttpException) {
-                //回调异常结果
-                if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
-                    item?.let { handler.failed.invoke(exception) }
-                } else {
-                    ContextHelper.handler.post { item?.let { handler.failed.invoke(exception) } }
+                if(contextCondition.invoke()){
+                    //回调异常结果
+                    handler.lifeCycle?.call(RequestLifeCycle.BEFORE_FAILED)
+                    if(handler.mainThread&&ContextHelper.mainThread==Thread.currentThread()){
+                        item?.let { handler.failed.invoke(exception) }
+                        handler.lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
+                    } else {
+                        ContextHelper.handler.post {
+                            item?.let { handler.failed.invoke(exception) }
+                            handler.lifeCycle?.call(RequestLifeCycle.AFTER_FAILED)
+                        }
+                    }
                 }
             }
         })
     }
+
+    fun cancel(tag:String?=null,any:Any){
+        client.cancel(if(null!=tag) any.javaClass.simpleName+tag else any.javaClass.simpleName)
+    }
+
 
     private object ContextHelper {
         val handler = Handler(Looper.getMainLooper())

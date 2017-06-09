@@ -48,6 +48,7 @@ public class MainActivity extends Activity {
 
     public String md5(String content) {
         MessageDigest md5 = null;
+
         try {
             md5 = MessageDigest.getInstance("md5");
         } catch (NoSuchAlgorithmException e) {

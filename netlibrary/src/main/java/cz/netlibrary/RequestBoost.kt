@@ -2,7 +2,9 @@ package cz.netlibrary
 
 import android.app.Activity
 import android.app.Application
-import android.app.Dialog
+import android.content.Context
+import android.net.ConnectivityManager
+import android.os.Build
 import android.support.v4.app.DialogFragment
 import android.support.v4.app.Fragment
 import cz.netlibrary.configradtion.HttpRequestConfig
@@ -23,7 +25,7 @@ fun Application.init(closure: HttpRequestConfig.()->Unit){
     BaseRequestClient.requestConfig = HttpRequestConfig().apply(closure)
 }
 
-fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit):Pair<RequestConfig, RequestHandler<T>>{
+fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Pair<RequestConfig, RequestHandler<T>> {
     var requestItem: RequestItem? =null
     if(null!=action){
         requestItem = Configuration[action]
@@ -32,9 +34,8 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit):Pair<R
     val config = requestBuilder.config
     val handler = requestBuilder.handler
     handler.mainThread=requestBuilder.mainThread
-    if(null==requestItem||!config.init){
-        throw IllegalAccessException("Must use a template config or a get/post to request!")
-    } else if(null!=requestItem){
+    handler.contextCondition=requestBuilder.contextCondition
+    if(null!=requestItem){
         //请求网络
         config.info=requestItem.info
         config.url=requestItem.url
@@ -47,97 +48,102 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit):Pair<R
 }
 
 /**
- * v4 activity
+ * activity
  */
-fun<T> Activity.request(action:String?=null, request: RequestBuilder<T>.()->Unit){
+fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(this.javaClass.simpleName, item, handler)
+    RequestClient.request(getAnyTag(tag,this), item, handler){
+        val condition=if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1)
+            !isFinishing
+         else
+            !isFinishing||!isDestroyed
+        !handler.contextCondition||condition
+    }
 }
 
+fun<T> Activity.request(action:String?=null, request: RequestBuilder<T>.()->Unit)=request(null,action,request)
+
 /**
- * v4 activity request string
+ * activity request string
  */
 fun Activity.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(this.javaClass.simpleName, item, handler)
+    request(action,request)
 }
+
+fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
 /**
  * v4 fragment
  */
-fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit){
+fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+    RequestClient.request(getAnyTag(tag,this), item, handler){ !handler.contextCondition||!isDetached&&null!=view?.windowToken }
 }
 
+fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
 /**
  * v4 fragment request string
  */
 fun Fragment.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+    request(action,request)
 }
 
-/**
- * app activity
- */
-fun<T> android.app.Fragment.request(action:String?=null,request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
-}
-
-/**
- * app activity request string
- */
-fun android.app.Fragment.requestString(action:String?=null,request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
-}
+fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
 /**
  * v4 dialogFragment
  */
-fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit){
+fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+    RequestClient.request(getAnyTag(tag,this), item, handler){!handler.contextCondition||!isDetached&&null!=view?.windowToken}
 }
 
+fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
 /**
  * v4 dialogFragment request string
  */
-fun DialogFragment.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+fun DialogFragment.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit)=request(action,request)
+
+fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
+
+
+fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) any.javaClass.simpleName+tag else any.javaClass.simpleName
+
+
+
+//----------------------------------------------------
+//网络块扩展
+//----------------------------------------------------
+fun Activity.enableNetWork():Boolean=enableNetWork(this)
+fun Activity.isWifi():Boolean=isWifi(this)
+fun Activity.isMobile():Boolean=isMobile(this)
+
+fun Fragment.enableNetWork():Boolean=enableNetWork(context)
+fun Fragment.isWifi():Boolean=isWifi(context)
+fun Fragment.isMobile():Boolean=isMobile(context)
+
+
+fun enableNetWork(context:Context?): Boolean {
+    val context=context?:return false
+    return isWifi(context) || isMobile(context)
 }
 
-/**
- * app dialogFragment
- */
-fun<T> android.app.DialogFragment.request(action:String?=null,request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+fun isWifi(context:Context?): Boolean {
+    val context=context?:return false
+    var result:Boolean=false
+    val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
+    if(systemService is ConnectivityManager){
+        result=systemService.activeNetworkInfo.type==ConnectivityManager.TYPE_WIFI
+    }
+    return result
 }
 
-/**
- * app dialogFragment request string
- */
-fun android.app.DialogFragment.requestString(action:String?=null,request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
-}
-
-/**
- * app dialog
- */
-fun<T> Dialog.request(action:String?=null, request: RequestBuilder<T>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
-}
-
-/**
- * app dialog request string
- */
-fun Dialog.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    val (item,handler) = getRequestItem(action, request)
-    RequestClient.request(javaClass.simpleName, item, handler)
+fun isMobile(context:Context?): Boolean {
+    val context=context?:return false
+    var result:Boolean=false
+    val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
+    if(systemService is ConnectivityManager){
+        result=systemService.activeNetworkInfo.type==ConnectivityManager.TYPE_MOBILE
+    }
+    return result
 }

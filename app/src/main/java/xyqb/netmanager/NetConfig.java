@@ -8,4 +8,5 @@ public interface NetConfig {
     String HOTEL_CITY="hotel_city";
 
     String USER_SUGGESTION="user_suggestion";
+
 }

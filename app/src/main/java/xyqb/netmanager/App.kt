@@ -12,6 +12,7 @@ class App: Application() {
         //初始化网络配置
         init {
             writeTimeout=10*1000
+            readTimeout=10*1000
         }
     }
 }
