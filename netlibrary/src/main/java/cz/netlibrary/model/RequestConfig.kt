@@ -9,12 +9,10 @@ class RequestConfig{
     var method = RequestMethod.get
     var url:String=String()
     var info:String?=null
-    var pathValues= mutableListOf<String>()
-    var templateName= mutableListOf<String>()
-    var templateValue= mutableListOf<Any>()
+    var pathValue = mutableListOf<String>()
     var entity:Pair<String,String>?=null
-    var cookies= mutableListOf<Pair<String,String>>()
-    var params= mutableListOf<Pair<String,String>>()
-    var header= mutableListOf<Pair<String,String>>()
-    var partItems= mutableListOf<Pair<String, File>>()
+    var cookies= mutableMapOf<String,String>()
+    var params= mutableMapOf<String,String>()
+    var header= mutableMapOf<String,String>()
+    var partItems= mutableMapOf<String,File>()
 }

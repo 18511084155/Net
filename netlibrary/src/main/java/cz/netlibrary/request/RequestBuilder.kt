@@ -16,14 +16,19 @@ class RequestBuilder<T>{
     var contextDetection =true
     //请求生命周期
     var lifeCycle: LifeCycleCallback?=null
+    //模板请求参数
+    var params= arrayOf<Any>()
+    //模板请求entity
+    var entity:String?=null
     //配置一个get请求信息
     inline fun get(closure: GetRequest.() -> Unit){
         val request = GetRequest().apply(closure)
         config.info=request.info
         config.url=request.url
         config.method=request.method
-        config.params.addAll(request.params)
-        config.header.addAll(request.header)
+        request.params?.let { config.params.putAll(it) }
+        request.header?.let { config.header.putAll(it) }
+        request.pathValue?.let { config.pathValue.addAll(it) }
     }
 
     //配置一个post请求信息
@@ -33,9 +38,10 @@ class RequestBuilder<T>{
         config.url=request.url
         config.method=request.method
         config.entity=request.entity
-        config.params.addAll(request.params)
-        config.header.addAll(request.header)
-        config.partItems.addAll(request.partItems)
+        request.params?.let { config.params.putAll(it) }
+        request.header?.let { config.header.putAll(it) }
+        request.partItems?.let { config.partItems.putAll(it) }
+        request.pathValue?.let { config.pathValue.addAll(it) }
     }
 
     //过滤信息
@@ -53,7 +59,7 @@ class RequestBuilder<T>{
         this.handler.failed=failed
     }
     //无网络
-    fun noNetWork(default:Boolean=false,closure:()->Unit){
+    fun noNetWork(closure:()->Unit){
         this.handler.noNetWork=closure
     }
 }

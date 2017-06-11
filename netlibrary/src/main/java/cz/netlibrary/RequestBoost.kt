@@ -9,10 +9,13 @@ import android.support.v4.app.DialogFragment
 import android.support.v4.app.Fragment
 import cz.netlibrary.configradtion.HttpRequestConfig
 import cz.netlibrary.impl.BaseRequestClient
+import cz.netlibrary.log.HttpLog
 import cz.netlibrary.model.Configuration
+import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestItem
 import cz.netlibrary.request.RequestBuilder
 import cz.netlibrary.request.RequestClient
+import cz.netlibrary.request.RequestHandler
 
 /**
  * Created by cz on 2017/6/7.
@@ -21,12 +24,26 @@ import cz.netlibrary.request.RequestClient
 fun Application.init(closure: HttpRequestConfig.()->Unit){
     //配置的全局网格信息
     BaseRequestClient.requestConfig = HttpRequestConfig().apply(closure)
+    HttpLog.httpLog=BaseRequestClient.requestConfig.httpLog
 }
+
+val JSON_MEDIA_TYPE:String="application/json; charset=utf-8"
 
 fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): RequestBuilder<T> {
     var requestItem: RequestItem? =null
     if(null!=action){
         requestItem = Configuration[action]
+        HttpLog.log{
+            if(null==requestItem){
+                append("$action 获取网络配置模块失败!\n")
+            } else {
+                append("获取网络配置模块:$action \n")
+                append("url:${requestItem?.url} \n")
+                append("info:${requestItem?.info}\n")
+                append("method:${requestItem?.method}\n")
+                append("params:${requestItem?.params}\n")
+            }
+        }
     }
     val requestBuilder = RequestBuilder<T>().apply(request)
     if(null!=requestItem){
@@ -35,8 +52,26 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
         requestBuilder.config.url=requestItem.url
         requestBuilder.config.method=requestItem.method
         requestBuilder.config.info=requestItem.info
-        requestBuilder.config.templateName=requestItem.params
-        requestBuilder.config.pathValues.addAll(requestItem.pathValues)
+        //设置entity
+        requestBuilder.entity?.let { requestBuilder.config.entity= JSON_MEDIA_TYPE.to(it) }
+        //合并模板参数与值
+        if(requestItem.params.size==requestBuilder.params.size){
+            requestItem.params.
+                    zip(requestBuilder.params).
+                    filter { null==it.second }.
+                    forEach { (first, second) -> requestBuilder.config.params[first]= second.toString()  }
+        }
+    }
+    val config=requestBuilder.config
+    HttpLog.log{
+        append("请求信息:${String.format(config.url,config.pathValue)}\n")
+        append("url:${config.url}\n")
+        append("info:${config.info}\n")
+        append("method:${config.method}\n")
+        append("pathValue:${config.pathValue}\n")
+        append("entity:${config.entity}\n")
+        append("params:${config.params}\n")
+        append("header:${config.header}\n")
     }
     return requestBuilder
 }
@@ -46,12 +81,13 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
  */
 fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this),item){
-        val condition=if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1)
-            !isFinishing
-         else
-            !isFinishing||!isDestroyed
-        !item.contextDetection ||condition
+    interceptRequest(applicationContext,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this),item){
+            val condition=!item.contextDetection or
+                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
+            HttpLog.log{ append("Activity:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
+            condition
+        }
     }
 }
 
@@ -71,7 +107,13 @@ fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this),item){ !item.contextDetection ||!isDetached&&null!=view?.windowToken }
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this),item){
+            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+            HttpLog.log{ append("Fragment:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
+            condition
+        }
+    }
 }
 
 fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
@@ -89,7 +131,13 @@ fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    RequestClient.request(getAnyTag(tag,this), item){!item.contextDetection ||!isDetached&&null!=view?.windowToken}
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this), item){
+            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+            HttpLog.log{ append("DialogFragment:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
+            condition
+        }
+    }
 }
 
 fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
@@ -100,10 +148,22 @@ fun DialogFragment.requestString(action:String?=null, request: RequestBuilder<St
 
 fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
+/**
+ * 请求前置处理
+ */
+fun<T> interceptRequest(context:Context?,item:RequestConfig,handler:RequestHandler<T>, closure:()->Unit){
+    val interceptor = BaseRequestClient.requestConfig?.networkInterceptor?.invoke(item)
+    if(null==interceptor||!interceptor){
+        closure.invoke()
+    } else if(enableNetWork(context)){
+        closure.invoke()
+    } else {
+        //无网络
+        handler.noNetWork.invoke()
+    }
+}
 
 fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) any.javaClass.simpleName+tag else any.javaClass.simpleName
-
-
 
 //----------------------------------------------------
 //网络块扩展

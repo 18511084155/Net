@@ -3,6 +3,7 @@ package cz.netlibrary.impl
 import android.text.TextUtils
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
+import cz.netlibrary.log.HttpLog
 import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestMethod
 import okhttp3.*
@@ -13,9 +14,6 @@ import java.io.IOException
  * okhttp3请求操作实例对象
  */
 class OkHttp3ClientImpl : BaseRequestClient<Response>() {
-    val JSON = MediaType.parse("application/json; charset=utf-8")
-    val TEXT = MediaType.parse("Content-Type application/x-www-form-")
-    val STREAM = MediaType.parse("application/octet-stream")
 
     val callItems= mutableMapOf<String,MutableList<Call>>()
     override fun call(tag: String, item: RequestConfig,callback:RequestCallback<Response>?) {
@@ -23,11 +21,15 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         val st = System.currentTimeMillis()
         try {
             val request = getRequest(tag, item)
+            HttpLog.log { append("发起请求:${request.url()}\n") }
             call = httpClient.newCall(request)
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     callItems.remove(tag)
-                    callback?.onFailed(HttpException(-1,e.message))
+                    HttpLog.log { append("请求失败:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
+                    val httpException=HttpException(-1,e.message)
+                    callback?.onFailed(httpException)
+                    requestConfig.requestCallback?.invoke(null,-1,httpException)
                 }
 
                 @Throws(IOException::class)
@@ -39,12 +41,15 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                     } else {
                         result = response.body().string().toString()
                     }
+                    HttpLog.log { append("请求成功:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除:Tag:$tag\n") }
                     callback?.onSuccess(response,response.code(),result,(System.currentTimeMillis()-st))
+                    requestConfig.requestCallback?.invoke(result,response.code(),null)
                 }
             })
         } catch (e: Exception) {
             //request failed
             call=null
+            HttpLog.log { append("请求操作异常:${e.message}\n") }
             callback?.onFailed(HttpException(-1,e.message))
         }
         call?.let {
@@ -52,6 +57,10 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                 callItems[tag]= mutableListOf()
             }
             callItems[tag]?.add(it)
+            HttpLog.log {
+                append("请求添加Tag:$tag\n")
+                append("当前网络请求数:${callItems.map { it.value.size }.fold(0){total, next -> total + next}}\n")
+            }
         }
     }
 
@@ -59,23 +68,27 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         try{
             val items=callItems.remove(tag)
             items?.let { it.forEach { if(!it.isCanceled)it.cancel() } }
-        } catch (e:Exception){ }
+        } catch (e:Exception){
+            HttpLog.log { append("取消任务:$tag 发生异常:\n${e.message}\n") }
+        }
     }
 
     private fun getRequest(tag: String, item: RequestConfig): Request {
         val requestUrl = item.getRequestUrl()
         val url = StringBuilder(requestUrl)
-        if(!item.pathValues.isEmpty()){
-            url.append(String.format(requestUrl, item.pathValues))
+        if(!item.pathValue.isEmpty()){
+            url.append(String.format(requestUrl, item.pathValue))
         }
+        HttpLog.log { append("请求url:$url \n") }
         //add extras param
-        requestConfig.extrasParams?.let { it.invoke()?.forEach { item.params.add(it.first.to(it.second)) } }
+        requestConfig.extrasParams?.let {  item.params.putAll(it) }
         var request=when(item.method){
             RequestMethod.post, RequestMethod.put-> getMultipartRequest(tag,url,item)
             RequestMethod.get->getGetRequest(tag,url,item)
         }
         //add cookie
-        val cookie = item.cookies.joinToString("&") { "${it.first}=${it.second}" }
+        val cookie = item.cookies.map { it.key.to(it.value) }.joinToString("&") { "${it.first}=${it.second}" }
+        HttpLog.log { append("cookie:$cookie\n") }
         val newBuilder = request.newBuilder()
         newBuilder.header("Cookie", cookie)
         request = newBuilder.build()
@@ -90,10 +103,10 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
 //            HttpLog.d("Request entity:" + requestUrl + "\nmediaType:" + item.entity.first + "\nJson:\n" + item.entity)
         } else {
             val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
-            item.params.forEach { builder.addFormDataPart(it.first,it.second) }
+            item.params.forEach { builder.addFormDataPart(it.key,it.value) }
             item.partItems.forEach {
-                requestBody = RequestBody.create(STREAM, it.second)
-                builder.addFormDataPart(it.first, it.second.name, requestBody)
+                requestBody = RequestBody.create(STREAM, it.key)
+                builder.addFormDataPart(it.key, it.value.name, requestBody)
             }
             requestBody = builder.build()
         }
@@ -110,7 +123,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
      * 获取一个get请求对象
      */
     private fun getGetRequest(tag: String?,url:StringBuilder,item: RequestConfig):Request{
-        url.append(item.params.joinToString("&") { "${it.first}=${it.second}"})
+        url.append(item.params.map { it.key.to(it.value) }.joinToString("&") { "${it.first}=${it.second}"})
         val requestBuilder = Request.Builder().url(url.toString())
         initRequestBuild(tag, item, requestBuilder)
         return requestBuilder.build()
@@ -124,13 +137,13 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         val headerBuilder = StringBuilder()
         //add custom header items
         item.header.forEach {
-            headerBuilder.append(it.first + "=" + it.second + ";")
-            requestBuilder.addHeader(it.first, it.second)
+            headerBuilder.append(it.key + "=" + it.value + ";")
+            requestBuilder.addHeader(it.key, it.value)
         }
         requestConfig.extrasHeader?.let {
-            it.invoke()?.forEach {
-                headerBuilder.append(it.first + "=" + it.second + ";")
-                requestBuilder.addHeader(it.first, it.second)
+            it.forEach {
+                headerBuilder.append(it.key + "=" + it.value + ";")
+                requestBuilder.addHeader(it.key, it.value)
             }
         }
         tag?.let { requestBuilder.tag(it) }

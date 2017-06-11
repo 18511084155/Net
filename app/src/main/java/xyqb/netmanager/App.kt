@@ -2,6 +2,7 @@ package xyqb.netmanager
 
 import android.app.Application
 import cz.netlibrary.init
+import cz.netlibrary.log.LogLevel
 
 /**
  * Created by cz on 2017/6/7.
@@ -13,6 +14,8 @@ class App: Application() {
         init {
             writeTimeout=10*1000
             readTimeout=10*1000
+            logLevel=LogLevel.all
+            applyRequest{ this }
         }
     }
 }

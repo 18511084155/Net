@@ -6,6 +6,7 @@ import cz.netlibrary.configradtion.HttpRequestConfig
 import cz.netlibrary.model.RequestConfig
 import okhttp3.Cache
 import okhttp3.Interceptor
+import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +16,9 @@ import java.util.concurrent.TimeUnit
 abstract class BaseRequestClient<out T> {
 
     companion object {
+        val JSON = MediaType.parse("application/json; charset=utf-8")
+        val TEXT = MediaType.parse("Content-Type application/x-www-form-")
+        val STREAM = MediaType.parse("application/octet-stream")
         val httpClient: OkHttpClient
         var requestConfig: HttpRequestConfig = HttpRequestConfig()
         init {
@@ -56,7 +60,7 @@ abstract class BaseRequestClient<out T> {
      */
     fun RequestConfig.getRequestUrl(): String {
         //此设计在应用requestItem之前,可以全局拦截,修改信息
-        val requestUrl = requestConfig.pre?.invoke(this)
+        val requestUrl = requestConfig.applyRequest?.invoke(this)?.url
         val absoluteUrl: String
         if(null!=requestUrl){
             if(!Patterns.WEB_URL.matcher(requestUrl).matches()){

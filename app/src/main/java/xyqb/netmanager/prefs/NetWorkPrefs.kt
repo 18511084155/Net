@@ -1,4 +1,4 @@
-package xyqb.netmanager
+package xyqb.netmanager.prefs
 
 import cz.netlibrary.model.Configuration
 import cz.netlibrary.model.RequestMethod
@@ -10,14 +10,14 @@ object NetWorkPrefs {
     val action1="请求登录"
     init {
         Configuration.init {
-            item{
-                action=action1
-                method= RequestMethod.get
-                info="请求1"
-                url=""
-                params= mutableListOf("","","")
+            item {
+                action = action1
+                method = RequestMethod.get
+                info = "请求1"
+                url = ""
+                params = arrayOf("", "", "")
             }
-            item{
+            item {
 
             }
 
