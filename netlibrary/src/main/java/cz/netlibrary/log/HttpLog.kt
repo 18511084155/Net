@@ -8,7 +8,9 @@ import android.util.Log
 object HttpLog{
     val TAG="HttpLog"
     var httpLog=false
+
     fun log(action:StringBuilder.()->Unit){
         if(httpLog){ Log.i(TAG,StringBuilder().apply(action).toString()) }
     }
+
 }

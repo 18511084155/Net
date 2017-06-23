@@ -1,4 +1,4 @@
-package xyqb.netmanager.lifecycle
+package net.sample.lifecycle
 
 import android.app.Dialog
 import cz.netlibrary.callback.LifeCycleCallback

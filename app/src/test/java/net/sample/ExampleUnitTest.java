@@ -1,4 +1,4 @@
-package xyqb.netmanager;
+package net.sample;
 
 import org.junit.Test;
 

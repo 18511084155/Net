@@ -37,15 +37,17 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
             if(null==requestItem){
                 append("$action 获取网络配置模块失败!\n")
             } else {
-                append("获取网络配置模块:$action \n")
-                append("url:${requestItem?.url} \n")
-                append("info:${requestItem?.info}\n")
-                append("method:${requestItem?.method}\n")
-                append("params:${requestItem?.params}\n")
+                append("获取网络配置模块:$action-----------------------\n")
+                append("\turl:${requestItem?.url}\n")
+                append("\tinfo:${requestItem?.info}\n")
+                append("\tmethod:${requestItem?.method}\n")
+                append("\tparams:[${requestItem?.params?.joinToString { it }}]\n")
+                append("--------------------------------------------\n")
             }
         }
     }
     val requestBuilder = RequestBuilder<T>().apply(request)
+    val config=requestBuilder.config
     if(null!=requestItem){
         //请求网络
         requestBuilder.config.info=requestItem.info
@@ -56,22 +58,23 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
         requestBuilder.entity?.let { requestBuilder.config.entity= JSON_MEDIA_TYPE.to(it) }
         //合并模板参数与值
         if(requestItem.params.size==requestBuilder.params.size){
+            println(requestBuilder.config.params)
             requestItem.params.
                     zip(requestBuilder.params).
-                    filter { null==it.second }.
-                    forEach { (first, second) -> requestBuilder.config.params[first]= second.toString()  }
+                    filter { null!=it.second }.
+                    forEach { (first, second) -> config.params[first]= second.toString()  }
         }
     }
-    val config=requestBuilder.config
     HttpLog.log{
-        append("请求信息:${String.format(config.url,config.pathValue)}\n")
-        append("url:${config.url}\n")
-        append("info:${config.info}\n")
-        append("method:${config.method}\n")
-        append("pathValue:${config.pathValue}\n")
-        append("entity:${config.entity}\n")
-        append("params:${config.params}\n")
-        append("header:${config.header}\n")
+        append("请求信息:${String.format(config.url,config.pathValue)}-----------------\n")
+        append("\turl:${config.url}\n")
+        append("\tinfo:${config.info}\n")
+        append("\tmethod:${config.method}\n")
+        append("\tpathValue:${config.pathValue}\n")
+        append("\tentity:${config.entity}\n")
+        append("\tparams:${config.params}\n")
+        append("\theader:${config.header}\n")
+        append("--------------------------------------------------------\n")
     }
     return requestBuilder
 }
@@ -81,24 +84,23 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
  */
 fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    interceptRequest(applicationContext,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this),item){
-            val condition=!item.contextDetection or
-                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
-            HttpLog.log{ append("Activity:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
-            condition
+    if(!enableNetWork()){
+        item.handler.noNetWork?.invoke()
+    } else {
+        interceptRequest(applicationContext,item.config,item.handler){
+            RequestClient.request(getAnyTag(tag,this),item){
+                val className=this::class.java.simpleName
+                val condition=!item.contextDetection or
+                        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
+                HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition") }
+                condition
+            }
         }
     }
 }
 
 fun<T> Activity.request(action:String?=null, request: RequestBuilder<T>.()->Unit)=request(null,action,request)
 
-/**
- * activity request string
- */
-fun Activity.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    request(action,request)
-}
 
 fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
@@ -107,22 +109,21 @@ fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this),item){
-            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
-            HttpLog.log{ append("Fragment:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
-            condition
+    if(!enableNetWork()){
+        item.handler.noNetWork?.invoke()
+    } else {
+        interceptRequest(context,item.config,item.handler){
+            RequestClient.request(getAnyTag(tag,this),item){
+                val className=this::class.java.simpleName
+                val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+                HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
+                condition
+            }
         }
     }
 }
 
-fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
-/**
- * v4 fragment request string
- */
-fun Fragment.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit){
-    request(action,request)
-}
+fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(null,action,request)
 
 fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
@@ -131,20 +132,21 @@ fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this), item){
-            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
-            HttpLog.log{ append("DialogFragment:${this::class.java.simpleName} Tag:$tag 上下文检测:$condition") }
-            condition
+    if(!enableNetWork()){
+        item.handler.noNetWork?.invoke()
+    } else {
+        interceptRequest(context,item.config,item.handler){
+            RequestClient.request(getAnyTag(tag,this), item){
+                val className=this::class.java.simpleName
+                val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+                HttpLog.log{ append("DialogFragment:$className Tag:$tag 上下文检测:$condition") }
+                condition
+            }
         }
     }
 }
 
-fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(action,request)
-/**
- * v4 dialogFragment request string
- */
-fun DialogFragment.requestString(action:String?=null, request: RequestBuilder<String>.()->Unit)=request(action,request)
+fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(null,action,request)
 
 fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
@@ -187,7 +189,7 @@ fun isWifi(context:Context?): Boolean {
     var result:Boolean=false
     val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
     if(systemService is ConnectivityManager){
-        result=systemService.activeNetworkInfo.type==ConnectivityManager.TYPE_WIFI
+        result=systemService.activeNetworkInfo?.type==ConnectivityManager.TYPE_WIFI
     }
     return result
 }
@@ -197,7 +199,7 @@ fun isMobile(context:Context?): Boolean {
     var result:Boolean=false
     val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
     if(systemService is ConnectivityManager){
-        result=systemService.activeNetworkInfo.type==ConnectivityManager.TYPE_MOBILE
+        result=systemService.activeNetworkInfo?.type==ConnectivityManager.TYPE_MOBILE
     }
     return result
 }

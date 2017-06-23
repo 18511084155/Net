@@ -15,9 +15,10 @@ class RequestBuilder<T>{
     //检测上下文
     var contextDetection =true
     //请求生命周期
-    var lifeCycle: LifeCycleCallback?=null
+    var lifeCycle: ((RequestLifeCycle)->Unit)?=null
+    var lifeCycleItem: LifeCycleCallback?=null
     //模板请求参数
-    var params= arrayOf<Any>()
+    var params= arrayOf<Any?>()
     //模板请求entity
     var entity:String?=null
     //配置一个get请求信息
@@ -45,7 +46,7 @@ class RequestBuilder<T>{
     }
 
     //过滤信息
-    fun map(map: (String) -> T?){
+    fun map(map: ((String) -> T)?){
         this.handler.map=map
     }
 
