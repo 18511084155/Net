@@ -12,7 +12,7 @@ class RequestConfig{
     var pathValue = mutableListOf<String>()
     var entity:Pair<String,String>?=null
     var cookies= mutableMapOf<String,String>()
-    var params= mutableMapOf<String,String>()
+    var params= mutableMapOf<String,Any?>()
     var header= mutableMapOf<String,String>()
     var partItems= mutableMapOf<String,File>()
 }

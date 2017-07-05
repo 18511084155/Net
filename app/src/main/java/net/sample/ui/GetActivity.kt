@@ -50,7 +50,7 @@ class GetActivity : AppCompatActivity() {
                 contentView.append(formatter.format(it).reduce { acc, s -> acc+s })
             }
             failed {
-                contentView.text=it.result
+                contentView.text=it.message
             }
         }
     }

@@ -10,17 +10,25 @@ import cz.netlibrary.request.RequestLifeCycle
  */
 class ProgressDialogLifeCycle(context: Context,text:String): LifeCycleCallback{
     val dialog=ProgressDialog(context)
+    var condition: (()->Boolean)?=null
     init {
         dialog.setMessage(text)
     }
 
     override fun call(lifeCycle: RequestLifeCycle) {
-        when(lifeCycle){
-            RequestLifeCycle.START->dialog.show()
-            RequestLifeCycle.CANCEL,
-            RequestLifeCycle.AFTER_CALL,
-            RequestLifeCycle.AFTER_FAILED->dialog.dismiss()
+        val condition=condition;
+        if(null==condition||condition.invoke()){
+            when(lifeCycle){
+                RequestLifeCycle.START->dialog.show()
+                RequestLifeCycle.CANCEL,
+                RequestLifeCycle.AFTER_CALL,
+                RequestLifeCycle.AFTER_FAILED->dialog.dismiss()
+            }
         }
+    }
+
+    fun condition(condition: ()->Boolean){
+        this.condition=condition
     }
 
 }

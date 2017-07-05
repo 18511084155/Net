@@ -41,8 +41,8 @@ class TemplateFragment:Fragment(){
             success {
                 contentView.text=formatter.format(it).reduce { acc, s -> acc+s }
             }
-            failed {
-                contentView.text=it.result
+            failed { (code,message)->
+                contentView.text=message
             }
         }
     }

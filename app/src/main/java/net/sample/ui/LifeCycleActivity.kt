@@ -48,7 +48,7 @@ class LifeCycleActivity : AppCompatActivity() {
                 }
                 success { toast("请求并回调成功!") }
                 failed {
-                    contentView.text=it.result
+                    contentView.text=it.message
                 }
                 noNetWork(this@LifeCycleActivity::noNetworkDialog)
             }

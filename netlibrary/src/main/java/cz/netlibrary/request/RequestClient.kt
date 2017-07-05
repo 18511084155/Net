@@ -18,36 +18,31 @@ object RequestClient{
 
     fun<T> request(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean){
         val config= requestItem.config
-        val lifeCycle= requestItem.lifeCycle
-        val lifeCycleItem= requestItem.lifeCycleItem
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
-        lifeCycle?.invoke(RequestLifeCycle.START)
-        lifeCycleItem?.call(RequestLifeCycle.START)
         val abortOnError = BaseRequestClient.requestConfig.abortOnError
-
         client.call(tag,config,object:RequestCallback<Response> {
             override fun onSuccess(response: Response, code: Int, result: String, time: Long) {
                 if(!contextCondition.invoke()){
-                    lifeCycle?.invoke(RequestLifeCycle.CANCEL)
-                    lifeCycleItem?.call(RequestLifeCycle.CANCEL)
+                    lifeCycleCall(RequestLifeCycle.CANCEL)
                 } else {
-                    lifeCycle?.invoke(RequestLifeCycle.BEFORE_CALL)
-                    lifeCycleItem?.call(RequestLifeCycle.BEFORE_CALL)
+                    lifeCycleCall(RequestLifeCycle.BEFORE_CALL)
                     executeOnError {
                         HttpLog.log { append("请求成功:${response.request().url()}") }
-                        val item = handler.map!!.invoke(result)
-                        HttpLog.log { append("数据处理:${item?.toString()}\n") }
-                        //回调处理结果
-                        if (!contextCondition.invoke()) {
-                            lifeCycle?.invoke(RequestLifeCycle.CANCEL)
-                            lifeCycleItem?.call(RequestLifeCycle.CANCEL)
-                        } else {
-                            HttpLog.log { append("回调线程:$mainThread\n") }
+                        val item = handler.map?.invoke(result)?:null
+                        if(null==item){
                             executeOnThread {
-                                item?.let { handler.success.invoke(it) }
-                                lifeCycle?.invoke(RequestLifeCycle.AFTER_CALL)
-                                lifeCycleItem?.call(RequestLifeCycle.AFTER_CALL)
+                                HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
+                                handler.failed.invoke(HttpException(-1,"数据处理失败!"))
+                            }
+                        } else {
+                            HttpLog.log { append("数据处理:${item?.toString()}\n") }
+                            //回调处理结果
+                            if (!contextCondition.invoke()) {
+                                lifeCycleCall(RequestLifeCycle.CANCEL)
+                            } else {
+                                HttpLog.log { append("回调线程:$mainThread\n") }
+                                executeOnThread { item?.let { handler.success.invoke(it) } }
                             }
                         }
                     }?.apply {
@@ -56,40 +51,27 @@ object RequestClient{
                             handler.failed.invoke(HttpException(-1,message))
                         }
                     }
-                    ContextHelper.handler.post {
-                        lifeCycle?.invoke(RequestLifeCycle.FINISH)
-                        lifeCycleItem?.call(RequestLifeCycle.FINISH)
-                    }
+                    lifeCycleCall(RequestLifeCycle.AFTER_CALL)
+                    lifeCycleCall(RequestLifeCycle.FINISH)
                 }
             }
 
             override fun onFailed(exception: HttpException) {
                 if(!contextCondition.invoke()){
-                    lifeCycle?.invoke(RequestLifeCycle.CANCEL)
-                    lifeCycleItem?.call(RequestLifeCycle.CANCEL)
+                    lifeCycleCall(RequestLifeCycle.CANCEL)
                 } else {
                     //回调异常结果
-                    lifeCycle?.invoke(RequestLifeCycle.BEFORE_FAILED)
-                    lifeCycleItem?.call(RequestLifeCycle.BEFORE_FAILED)
+                    lifeCycleCall(RequestLifeCycle.BEFORE_FAILED)
                     HttpLog.log { append("异常回调线程:$mainThread\n") }
                     HttpLog.log {
                         append("\tcode:${exception.code}\n")
-                        append("\tresult:${exception.result}\n")
-                        append("\theaders:${exception.headers}\n")
-                        append("\tparams:${exception.params}\n")
                         append("\tmessage:${exception.message}\n")
                         append("-----------------------------stackTrace-----------------------------\n")
                         Thread.currentThread().stackTrace.forEach { append(it.toString()+"\n") }
                     }
-                    executeOnThread {
-                        handler.failed.invoke(exception)
-                        lifeCycle?.invoke(RequestLifeCycle.AFTER_FAILED)
-                        lifeCycleItem?.call(RequestLifeCycle.AFTER_FAILED)
-                    }
-                    ContextHelper.handler.post {
-                        lifeCycle?.invoke(RequestLifeCycle.FINISH)
-                        lifeCycleItem?.call(RequestLifeCycle.FINISH)
-                    }
+                    executeOnThread { handler.failed.invoke(exception) }
+                    lifeCycleCall(RequestLifeCycle.AFTER_CALL)
+                    lifeCycleCall(RequestLifeCycle.FINISH)
                 }
             }
             /**
@@ -118,6 +100,21 @@ object RequestClient{
                     executeOnError { closure.invoke() }
                 } else if(mainThread){
                     ContextHelper.handler.post { executeOnError { closure.invoke() } }
+                }
+            }
+
+            /**
+             * 请求生命周期回调,确保在子线程回调
+             */
+            fun lifeCycleCall(lifeCycle: RequestLifeCycle){
+                if(ContextHelper.mainThread==Thread.currentThread()){
+                    requestItem.lifeCycle?.invoke(lifeCycle)
+                    requestItem.lifeCycleItem?.call(lifeCycle)
+                } else {
+                    ContextHelper.handler.post {
+                        requestItem.lifeCycle?.invoke(lifeCycle)
+                        requestItem.lifeCycleItem?.call(lifeCycle)
+                    }
                 }
             }
         })

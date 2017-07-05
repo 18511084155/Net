@@ -7,6 +7,7 @@ import cz.netlibrary.log.HttpLog
 import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestMethod
 import okhttp3.*
+import java.io.File
 import java.io.IOException
 
 /**
@@ -103,7 +104,16 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
 //            HttpLog.d("Request entity:" + requestUrl + "\nmediaType:" + item.entity.first + "\nJson:\n" + item.entity)
         } else {
             val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
-            item.params.forEach { builder.addFormDataPart(it.key,it.value) }
+            item.params.forEach { (key,value)->
+                value?.let {
+                    if(it !is File){
+                        builder.addFormDataPart(key,value.toString())
+                    } else {
+                        requestBody = RequestBody.create(STREAM, key)
+                        builder.addFormDataPart(key, it.name, requestBody)
+                    }
+                }
+            }
             item.partItems.forEach {
                 requestBody = RequestBody.create(STREAM, it.key)
                 builder.addFormDataPart(it.key, it.value.name, requestBody)

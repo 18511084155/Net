@@ -59,10 +59,9 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
         //合并模板参数与值
         if(requestItem.params.size==requestBuilder.params.size){
             println(requestBuilder.config.params)
-            requestItem.params.
-                    zip(requestBuilder.params).
+            requestItem.params.zip(requestBuilder.params).
                     filter { null!=it.second }.
-                    forEach { (first, second) -> config.params[first]= second.toString()  }
+                    forEach { (first, second) -> config.params[first]=second  }
         }
     }
     HttpLog.log{
