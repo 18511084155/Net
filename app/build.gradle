@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 android {
     compileSdkVersion 24
-    buildToolsVersion "24.0.1"
+    buildToolsVersion '25.0.0'
 
     defaultConfig {
         applicationId "xyqb.netmanager"
@@ -28,7 +28,7 @@ dependencies {
     compile "org.jetbrains.anko:anko-support-v4:$anko_version"
     compile "org.jetbrains.anko:anko-sdk25:$anko_version"
     compile project(':netlibrary')
-    compile 'com.android.support:appcompat-v7:24.2.1'
+    compile 'com.android.support:appcompat-v7:25.0.1'
     compile 'com.cz.loglibrary:loglibrary:1.1.4'
     testCompile 'junit:junit:4.12'
 }

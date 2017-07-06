@@ -1,6 +1,7 @@
 package net.sample.prefs
 
 import cz.netlibrary.model.Configuration
+import cz.netlibrary.model.RequestMethod
 
 /**
  * Created by cz on 2017/6/7.
@@ -13,6 +14,7 @@ object NetWorkPrefs {
                 action = RAIL_WAY_TRAIN
                 info = "火车票车次查询"
                 url = "train/tickets/queryByTrainNo?"
+                method=RequestMethod.post
                 params = arrayOf("key", "trainno")
             }
             item {

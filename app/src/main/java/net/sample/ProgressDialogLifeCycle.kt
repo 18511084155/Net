@@ -20,9 +20,7 @@ class ProgressDialogLifeCycle(context: Context,text:String): LifeCycleCallback{
         if(null==condition||condition.invoke()){
             when(lifeCycle){
                 RequestLifeCycle.START->dialog.show()
-                RequestLifeCycle.CANCEL,
-                RequestLifeCycle.AFTER_CALL,
-                RequestLifeCycle.AFTER_FAILED->dialog.dismiss()
+                RequestLifeCycle.FINISH->dialog.dismiss()
             }
         }
     }

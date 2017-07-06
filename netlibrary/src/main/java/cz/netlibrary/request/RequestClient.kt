@@ -1,7 +1,11 @@
 package cz.netlibrary.request
 
+import android.app.Activity
+import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import cz.netlibrary.*
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.impl.BaseRequestClient
@@ -21,6 +25,8 @@ object RequestClient{
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
         val abortOnError = BaseRequestClient.requestConfig.abortOnError
+        requestItem.lifeCycle?.invoke(RequestLifeCycle.START)
+        requestItem.lifeCycleItem?.call(RequestLifeCycle.START)
         client.call(tag,config,object:RequestCallback<Response> {
             override fun onSuccess(response: Response, code: Int, result: String, time: Long) {
                 if(!contextCondition.invoke()){
@@ -107,14 +113,9 @@ object RequestClient{
              * 请求生命周期回调,确保在子线程回调
              */
             fun lifeCycleCall(lifeCycle: RequestLifeCycle){
-                if(ContextHelper.mainThread==Thread.currentThread()){
+                ContextHelper.handler.post {
                     requestItem.lifeCycle?.invoke(lifeCycle)
                     requestItem.lifeCycleItem?.call(lifeCycle)
-                } else {
-                    ContextHelper.handler.post {
-                        requestItem.lifeCycle?.invoke(lifeCycle)
-                        requestItem.lifeCycleItem?.call(lifeCycle)
-                    }
                 }
             }
         })

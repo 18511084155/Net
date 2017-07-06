@@ -12,7 +12,6 @@ class PostRequest{
     var url:String=String()
     var entity:Pair<String,String>?=null
     var pathValue:Array<String>?=null
-    var params:Map<String,String>?=null
-    var partItems:Map<String,File>?=null
+    var params:Map<String,Any?>?=null
     var header:Map<String,String>?=null
 }

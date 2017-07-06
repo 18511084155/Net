@@ -50,10 +50,10 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
     val config=requestBuilder.config
     if(null!=requestItem){
         //请求网络
-        requestBuilder.config.info=requestItem.info
-        requestBuilder.config.url=requestItem.url
-        requestBuilder.config.method=requestItem.method
-        requestBuilder.config.info=requestItem.info
+        config.info=requestItem.info
+        config.url=requestItem.url
+        config.method=requestItem.method
+        config.info=requestItem.info
         //设置entity
         requestBuilder.entity?.let { requestBuilder.config.entity= JSON_MEDIA_TYPE.to(it) }
         //合并模板参数与值
@@ -83,17 +83,13 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
  */
 fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    if(!enableNetWork()){
-        item.handler.noNetWork?.invoke()
-    } else {
-        interceptRequest(applicationContext,item.config,item.handler){
-            RequestClient.request(getAnyTag(tag,this),item){
-                val className=this::class.java.simpleName
-                val condition=!item.contextDetection or
-                        if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
-                HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition") }
-                condition
-            }
+    interceptRequest(applicationContext,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this),item){
+            val className=this::class.java.simpleName
+            val condition=!item.contextDetection or
+                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
+            HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition") }
+            condition
         }
     }
 }
@@ -108,16 +104,12 @@ fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    if(!enableNetWork()){
-        item.handler.noNetWork?.invoke()
-    } else {
-        interceptRequest(context,item.config,item.handler){
-            RequestClient.request(getAnyTag(tag,this),item){
-                val className=this::class.java.simpleName
-                val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
-                HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
-                condition
-            }
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this),item){
+            val className=this::class.java.simpleName
+            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+            HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
+            condition
         }
     }
 }
@@ -131,16 +123,12 @@ fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
-    if(!enableNetWork()){
-        item.handler.noNetWork?.invoke()
-    } else {
-        interceptRequest(context,item.config,item.handler){
-            RequestClient.request(getAnyTag(tag,this), item){
-                val className=this::class.java.simpleName
-                val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
-                HttpLog.log{ append("DialogFragment:$className Tag:$tag 上下文检测:$condition") }
-                condition
-            }
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this), item){
+            val className=this::class.java.simpleName
+            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+            HttpLog.log{ append("DialogFragment:$className Tag:$tag 上下文检测:$condition") }
+            condition
         }
     }
 }
@@ -148,6 +136,21 @@ fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: Req
 fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(null,action,request)
 
 fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
+
+/**
+ * any item dialogFragment
+ */
+inline fun<reified I, T> I.request(tag:String?=null, action:String?=null, context:Context, noinline request: RequestBuilder<T>.()->Unit){
+    val item = getRequestItem(action, request)
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.request(getAnyTag(tag,this as Any), item){ true }
+    }
+}
+
+inline fun<reified I,T> I.request(action:String?=null,context:Context,noinline request: RequestBuilder<T>.()->Unit):Unit=request(null,action,context,request)
+
+inline fun<reified I> I.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this as Any)
+
 
 /**
  * 请求前置处理
@@ -164,7 +167,7 @@ fun<T> interceptRequest(context:Context?,item:RequestConfig,handler:RequestHandl
     }
 }
 
-fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) any.javaClass.simpleName+tag else any.javaClass.simpleName
+fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) "${any.hashCode()}$tag" else "${any.hashCode()}"
 
 //----------------------------------------------------
 //网络块扩展

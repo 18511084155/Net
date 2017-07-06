@@ -41,7 +41,6 @@ class RequestBuilder<T>{
         config.entity=request.entity
         request.params?.let { config.params.putAll(it) }
         request.header?.let { config.header.putAll(it) }
-        request.partItems?.let { config.partItems.putAll(it) }
         request.pathValue?.let { config.pathValue.addAll(it) }
     }
 

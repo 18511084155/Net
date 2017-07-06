@@ -114,10 +114,6 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                     }
                 }
             }
-            item.partItems.forEach {
-                requestBody = RequestBody.create(STREAM, it.key)
-                builder.addFormDataPart(it.key, it.value.name, requestBody)
-            }
             requestBody = builder.build()
         }
         val requestBuilder = Request.Builder().url(url.toString())

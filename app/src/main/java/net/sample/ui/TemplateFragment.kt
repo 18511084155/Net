@@ -10,6 +10,7 @@ import com.cz.loglibrary.LogConfig
 import com.cz.loglibrary.impl.JsonPrinter
 import cz.netlibrary.request
 import kotlinx.android.synthetic.main.fragment_template.*
+import net.sample.ProgressDialogLifeCycle
 import net.sample.R
 import net.sample.prefs.NetWorkPrefs
 import org.jetbrains.anko.sdk25.coroutines.onClick
@@ -38,6 +39,7 @@ class TemplateFragment:Fragment(){
                 SystemClock.sleep(1*1000)
                 it
             }
+            lifeCycleItem= ProgressDialogLifeCycle(context,"加载中")
             success {
                 contentView.text=formatter.format(it).reduce { acc, s -> acc+s }
             }
