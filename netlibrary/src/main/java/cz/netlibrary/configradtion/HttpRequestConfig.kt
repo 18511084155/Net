@@ -18,6 +18,7 @@ class HttpRequestConfig {
     var retryOnConnectionFailure=false //异常重试
     var extrasParams:Map<String,String>?=null //附加参数
     var extrasHeader:Map<String,String>?=null //附加头信息
+    var requestErrorCallback:((Int,String)->HttpException)?=null
     var applyRequest:(RequestConfig.()->RequestConfig)?=null
     var networkInterceptor:(RequestConfig.()->Boolean)?=null
     var requestCallback:((String?, Int, HttpException?)->Unit)?=null

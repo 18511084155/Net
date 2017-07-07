@@ -42,9 +42,20 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                     } else {
                         result = response.body().string().toString()
                     }
-                    HttpLog.log { append("请求成功:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除:Tag:$tag\n") }
-                    callback?.onSuccess(response,response.code(),result,(System.currentTimeMillis()-st))
-                    requestConfig.requestCallback?.invoke(result,response.code(),null)
+                    val code = response.code()
+                    HttpLog.log { append("请求成功:${request.url()}\n请求返回值:$code\n耗时:${System.currentTimeMillis()-st} 移除:Tag:$tag\n") }
+                    if(200==code){
+                        callback?.onSuccess(response,response.code(),result,(System.currentTimeMillis()-st))
+                        requestConfig.requestCallback?.invoke(result,response.code(),null)
+                    } else {
+                        HttpLog.log { append("请求异常:$code\n结果$result\n") }
+                        val requestErrorCallback = requestConfig.requestErrorCallback
+                        if(null==requestErrorCallback){
+                            callback?.onFailed(HttpException(code,result))
+                        } else {
+                            callback?.onFailed(requestErrorCallback.invoke(code,result))
+                        }
+                    }
                 }
             })
         } catch (e: Exception) {

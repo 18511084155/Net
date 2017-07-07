@@ -87,8 +87,8 @@ fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBu
         RequestClient.request(getAnyTag(tag,this),item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection or
-                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) !isFinishing else !isFinishing||!isDestroyed
-            HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition") }
+                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) null!=window.decorView.windowToken else !isDestroyed||null!=window.decorView.windowToken
+            HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition ") }
             condition
         }
     }
