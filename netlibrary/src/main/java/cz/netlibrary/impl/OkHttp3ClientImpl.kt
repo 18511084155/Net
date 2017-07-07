@@ -88,9 +88,11 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
 
     private fun getRequest(tag: String, item: RequestConfig): Request {
         val requestUrl = item.getRequestUrl()
-        val url = StringBuilder(requestUrl)
+        var url:StringBuilder
         if(!item.pathValue.isEmpty()){
-            url.append(String.format(requestUrl, item.pathValue))
+            url=StringBuilder(String.format(requestUrl, item.pathValue))
+        } else {
+            url= StringBuilder(requestUrl)
         }
         HttpLog.log { append("请求url:$url \n") }
         //add extras param

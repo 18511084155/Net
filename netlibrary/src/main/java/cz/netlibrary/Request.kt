@@ -55,6 +55,8 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
         config.url=requestItem.url
         config.method=requestItem.method
         config.info=requestItem.info
+        //设置插值
+        requestBuilder.pathValue?.let { config.pathValue.addAll(it) }
         //设置entity
         requestBuilder.entity?.let { requestBuilder.config.entity= JSON_MEDIA_TYPE.to(it) }
         //合并模板参数与值

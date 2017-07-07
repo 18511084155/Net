@@ -19,6 +19,8 @@ class RequestBuilder<T>{
     var lifeCycleItem: LifeCycleCallback?=null
     //模板请求参数
     var params= arrayOf<Any?>()
+    //模板插值
+    var pathValue:Array<String>?=null
     //模板请求entity
     var entity:String?=null
 
