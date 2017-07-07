@@ -48,6 +48,7 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
     }
     val requestBuilder = RequestBuilder<T>().apply(request)
     val config=requestBuilder.config
+    config.action=action
     if(null!=requestItem){
         //请求网络
         config.info=requestItem.info

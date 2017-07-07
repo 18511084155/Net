@@ -20,6 +20,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
     override fun call(tag: String, item: RequestConfig,callback:RequestCallback<Response>?) {
         var call:Call?
         val st = System.currentTimeMillis()
+        val errorMessage = requestConfig.errorMessage
         try {
             val request = getRequest(tag, item)
             HttpLog.log { append("发起请求:${request.url()}\n") }
@@ -28,7 +29,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                 override fun onFailure(call: Call, e: IOException) {
                     callItems.remove(tag)
                     HttpLog.log { append("请求失败:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
-                    val httpException=HttpException(-1,e.message)
+                    val httpException=HttpException(-1,errorMessage?:e.message)
                     callback?.onFailed(httpException)
                     requestConfig.requestCallback?.invoke(null,-1,httpException)
                 }
@@ -62,7 +63,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             //request failed
             call=null
             HttpLog.log { append("请求操作异常:${e.message}\n") }
-            callback?.onFailed(HttpException(-1,e.message))
+            callback?.onFailed(HttpException(-1,errorMessage?:e.message))
         }
         call?.let {
             if(null==callItems[tag]){

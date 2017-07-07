@@ -25,6 +25,7 @@ object RequestClient{
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
         val abortOnError = BaseRequestClient.requestConfig.abortOnError
+        val errorMessage = BaseRequestClient.requestConfig.errorMessage
         requestItem.lifeCycle?.invoke(RequestLifeCycle.START)
         requestItem.lifeCycleItem?.call(RequestLifeCycle.START)
         client.call(tag,config,object:RequestCallback<Response> {
@@ -39,7 +40,7 @@ object RequestClient{
                         if(null==item){
                             executeOnThread {
                                 HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
-                                handler.failed.invoke(HttpException(-1,"数据处理失败!"))
+                                handler.failed.invoke(HttpException(-1,errorMessage?:"数据处理失败!"))
                             }
                         } else {
                             HttpLog.log { append("数据处理:${item?.toString()}\n") }
@@ -54,7 +55,7 @@ object RequestClient{
                     }?.apply {
                         executeOnThread {
                             HttpLog.log { append("请求成功但执行异常:$message\n") }
-                            handler.failed.invoke(HttpException(-1,message))
+                            handler.failed.invoke(HttpException(-1,errorMessage?:message))
                         }
                     }
                     lifeCycleCall(RequestLifeCycle.AFTER_CALL)

@@ -15,12 +15,16 @@ class RequestBuilder<T>{
     //检测上下文
     var contextDetection =true
     //请求生命周期
-    var lifeCycle: ((RequestLifeCycle)->Unit)?=null
+    internal var lifeCycle: ((RequestLifeCycle)->Unit)?=null
     var lifeCycleItem: LifeCycleCallback?=null
     //模板请求参数
     var params= arrayOf<Any?>()
     //模板请求entity
     var entity:String?=null
+
+    fun lifeCycle(action:(RequestLifeCycle)->Unit){
+        this.lifeCycle=action
+    }
     //配置一个get请求信息
     inline fun get(closure: GetRequest.() -> Unit){
         val request = GetRequest().apply(closure)

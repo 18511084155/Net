@@ -35,7 +35,7 @@ class GetActivity : AppCompatActivity() {
                 url="v1/weather/query?"
                 params= mapOf("key" to APP_KEY,"city" to "通州","province" to "北京")
             }
-            lifeCycle={
+            lifeCycle{
                 when(it){
                     RequestLifeCycle.START->progressBar.visibility= View.VISIBLE
                     RequestLifeCycle.FINISH->progressBar.visibility= View.GONE

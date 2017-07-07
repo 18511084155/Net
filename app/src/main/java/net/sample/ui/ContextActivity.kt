@@ -32,7 +32,7 @@ class ContextActivity : AppCompatActivity() {
         request<String> {
             mainThread=true//子线程回调
             contextDetection=false//不检测生命周期
-            lifeCycle={
+            lifeCycle{
                 when(it){
                     RequestLifeCycle.START->progressBar.visibility= View.VISIBLE
                     RequestLifeCycle.FINISH->progressBar.visibility= View.GONE

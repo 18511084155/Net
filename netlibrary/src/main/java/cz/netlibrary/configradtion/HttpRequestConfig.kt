@@ -10,6 +10,7 @@ import java.io.File
 class HttpRequestConfig {
     var abortOnError=false //运行异常是否终止
     var url: String? = null
+    var errorMessage:String?=null
     var connectTimeout: Int = 16*1000
     var readTimeout: Int = 16*1000
     var writeTimeout: Int = 16*1000
@@ -18,15 +19,17 @@ class HttpRequestConfig {
     var retryOnConnectionFailure=false //异常重试
     var extrasParams:Map<String,String>?=null //附加参数
     var extrasHeader:Map<String,String>?=null //附加头信息
-    var requestErrorCallback:((Int,String)->HttpException)?=null
-    var applyRequest:(RequestConfig.()->RequestConfig)?=null
-    var networkInterceptor:(RequestConfig.()->Boolean)?=null
-    var requestCallback:((String?, Int, HttpException?)->Unit)?=null
+    internal var requestErrorCallback:((Int,String)->HttpException)?=null
+    internal var applyRequest:(RequestConfig.()->RequestConfig)?=null
+    internal var networkInterceptor:(RequestConfig.()->Boolean)?=null
+    internal var requestCallback:((String?, Int, HttpException?)->Unit)?=null
     var httpLog=false//打印网络信息
     fun applyRequest(action:RequestConfig.()->RequestConfig){ this.applyRequest =action }
     //网络拦截器
     fun networkInterceptor(interceptor:RequestConfig.()->Boolean){ networkInterceptor =interceptor }
     //请求回调器
     fun requestCallback(action:(String?,Int,HttpException?)->Unit){ requestCallback =action }
+    //异常数据处理器
+    fun requestErrorCallback(action:(Int,String)->HttpException){ requestErrorCallback=action}
 
 }
