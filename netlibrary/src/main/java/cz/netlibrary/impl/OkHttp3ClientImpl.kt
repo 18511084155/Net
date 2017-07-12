@@ -90,7 +90,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         val requestUrl = item.getRequestUrl()
         var url:StringBuilder
         if(!item.pathValue.isEmpty()){
-            url=StringBuilder(String.format(requestUrl, item.pathValue))
+            url=StringBuilder(String.format(requestUrl, *item.pathValue.toTypedArray()))
         } else {
             url= StringBuilder(requestUrl)
         }
