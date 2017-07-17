@@ -1,6 +1,8 @@
 package cz.netlibrary.request
 
 import cz.netlibrary.callback.LifeCycleCallback
+import cz.netlibrary.callback.RequestFailCallback
+import cz.netlibrary.callback.RequestSuccessCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.model.RequestConfig
 
@@ -16,13 +18,19 @@ class RequestBuilder<T>{
     var contextDetection =true
     //请求生命周期
     internal var lifeCycle: ((RequestLifeCycle)->Unit)?=null
-    var lifeCycleItem: LifeCycleCallback?=null
+    internal var lifeCycleItem: LifeCycleCallback?=null
+    internal var lifeCycleCondition:(()->Boolean)?=null
     //模板请求参数
     var params= arrayOf<Any?>()
     //模板插值
     var pathValue:Array<String>?=null
     //模板请求entity
     var entity:String?=null
+
+    fun lifeCycleItem(lifeCycleItem: LifeCycleCallback?=null,condition:(()->Boolean)?=null){
+        this.lifeCycleItem=lifeCycleItem
+        this.lifeCycleCondition=condition
+    }
 
     fun lifeCycle(action:(RequestLifeCycle)->Unit){
         this.lifeCycle=action
@@ -56,12 +64,14 @@ class RequestBuilder<T>{
     }
 
     //完成回调
-    fun success(success: (T) -> Unit){
+    fun success(callback:RequestSuccessCallback<T>?=null,success: (T) -> Unit){
+        this.handler.successCallback=callback
         this.handler.success=success
     }
 
     //请求失败回调
-    fun failed(failed: (HttpException) -> Unit){
+    fun failed(callback:RequestFailCallback?=null,failed:(HttpException) -> Unit){
+        this.handler.failedCallback=callback
         this.handler.failed=failed
     }
     //无网络

@@ -17,6 +17,7 @@ class App: Application() {
             writeTimeout=10*1000
             readTimeout=10*1000
             httpLog=true
+
         }
         JLog.setLogConfig(LogConfig.get().setLogLevel(JLog.ALL))
     }

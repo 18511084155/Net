@@ -50,6 +50,8 @@ abstract class BaseRequestClient<out T> {
      */
     abstract fun call(tag:String,item: RequestConfig,callback:RequestCallback<T>?)
 
+    abstract fun syncCall(tag:String,item: RequestConfig,callback:RequestCallback<T>?):T?
+
     /**
      * 框架终止一个正在请求中的网络
      */

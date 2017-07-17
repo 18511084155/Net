@@ -40,7 +40,7 @@ class LifeCycleActivity : AppCompatActivity() {
                     }
                 }
                 //加入一个对话框回调器,以上,与这个接口回调器,二选一即可
-                lifeCycleItem= ProgressDialogLifeCycle(this@LifeCycleActivity,"加载中")
+                lifeCycleItem(ProgressDialogLifeCycle(this@LifeCycleActivity,"加载中"))
                 map{
                     //延持时间,检测上下文是否存在
                     SystemClock.sleep(1*1000)

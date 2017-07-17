@@ -1,5 +1,7 @@
 package cz.netlibrary.request
 
+import cz.netlibrary.callback.RequestFailCallback
+import cz.netlibrary.callback.RequestSuccessCallback
 import cz.netlibrary.exception.HttpException
 
 /**
@@ -8,6 +10,8 @@ import cz.netlibrary.exception.HttpException
 class RequestHandler<T>{
     var map: ((String) -> T)? = null
     var success: (T) -> Unit={}
+    var successCallback: RequestSuccessCallback<T>?=null
+    var failedCallback: RequestFailCallback?=null
     var failed: (HttpException) -> Unit={}
     var noNetWork:()->Unit={}
 }

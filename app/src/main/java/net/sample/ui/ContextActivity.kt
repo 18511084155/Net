@@ -51,7 +51,9 @@ class ContextActivity : AppCompatActivity() {
                 //这里测试回调线程信息
                 JLog.i("${Thread.currentThread().name} $it")
             }
-            failed (Exception::printStackTrace)
+            failed{
+                it.printStackTrace()
+            }
         }
     }
 }

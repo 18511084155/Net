@@ -39,7 +39,7 @@ class TemplateFragment:Fragment(){
                 SystemClock.sleep(1*1000)
                 it
             }
-            lifeCycleItem= ProgressDialogLifeCycle(context,"加载中")
+            lifeCycleItem(ProgressDialogLifeCycle(context,"加载中")){true}
             success {
                 contentView.text=formatter.format(it).reduce { acc, s -> acc+s }
             }

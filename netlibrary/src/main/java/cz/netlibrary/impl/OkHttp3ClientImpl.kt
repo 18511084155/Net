@@ -15,8 +15,34 @@ import java.io.IOException
  * okhttp3请求操作实例对象
  */
 class OkHttp3ClientImpl : BaseRequestClient<Response>() {
-
     val callItems= mutableMapOf<String,MutableList<Call>>()
+    
+    override fun syncCall(tag: String, item: RequestConfig, callback: RequestCallback<Response>?): Response? {
+        var call:Call?
+        var response:Response?=null
+        val st = System.currentTimeMillis()
+        val errorMessage = requestConfig.errorMessage
+        try {
+            val request = getRequest(tag, item)
+            HttpLog.log { append("发起请求:${request.url()}\n") }
+            call = httpClient.newCall(request)
+            response = call.execute()
+            handleResponse(tag, response, request.url().toString(), st, callback)
+        } catch (e: Exception) {
+            //request failed
+            if(null!=response){
+                HttpLog.log { append("请求失败:${response?.request()?.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
+                callback?.onFailed(HttpException(response.code(),getResponseResult(response)))
+            } else {
+                HttpLog.log { append("请求操作异常:${e.message}\n") }
+                callback?.onFailed(HttpException(-1,errorMessage?:e.message))
+            }
+        } finally {
+            callItems.remove(tag)
+        }
+        return response
+    }
+
     override fun call(tag: String, item: RequestConfig,callback:RequestCallback<Response>?) {
         var call:Call?
         val st = System.currentTimeMillis()
@@ -37,26 +63,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                 @Throws(IOException::class)
                 override fun onResponse(call: Call, response: Response) {
                     callItems.remove(tag)
-                    var result:String
-                    if (null != response.cacheResponse()) {
-                        result = response.cacheResponse().toString()
-                    } else {
-                        result = response.body().string().toString()
-                    }
-                    val code = response.code()
-                    HttpLog.log { append("请求成功:${request.url()}\n请求返回值:$code\n耗时:${System.currentTimeMillis()-st} 移除:Tag:$tag\n") }
-                    if(200==code){
-                        callback?.onSuccess(response,response.code(),result,(System.currentTimeMillis()-st))
-                        requestConfig.requestCallback?.invoke(result,response.code(),null)
-                    } else {
-                        HttpLog.log { append("请求异常:$code\n结果$result\n") }
-                        val requestErrorCallback = requestConfig.requestErrorCallback
-                        if(null==requestErrorCallback){
-                            callback?.onFailed(HttpException(code,result))
-                        } else {
-                            callback?.onFailed(requestErrorCallback.invoke(code,result))
-                        }
-                    }
+                    handleResponse(tag, response, request.url().toString(), st, callback)
                 }
             })
         } catch (e: Exception) {
@@ -75,6 +82,37 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                 append("当前网络请求数:${callItems.map { it.value.size }.fold(0){total, next -> total + next}}\n")
             }
         }
+    }
+
+    private fun handleResponse(tag: String, response: Response, url:String, st: Long, callback: RequestCallback<Response>?) {
+        var result: String = getResponseResult(response)
+        val code = response.code()
+        HttpLog.log { append("请求成功:$url\n请求返回值:$code\n耗时:${System.currentTimeMillis() - st} 移除:Tag:$tag\n") }
+        if (200 == code) {
+            callback?.onSuccess(response, response.code(), result, (System.currentTimeMillis() - st))
+            requestConfig.requestCallback?.invoke(result, response.code(), null)
+        } else {
+            HttpLog.log { append("请求异常:$code\n结果$result\n") }
+            val requestErrorCallback = requestConfig.requestErrorCallback
+            if (null == requestErrorCallback) {
+                callback?.onFailed(HttpException(code, result))
+            } else {
+                callback?.onFailed(requestErrorCallback.invoke(code, result))
+            }
+        }
+    }
+
+    /**
+     * 获得返回结果值
+     */
+    private fun getResponseResult(response: Response): String {
+        var result: String
+        if (null != response.cacheResponse()) {
+            result = response.cacheResponse().toString()
+        } else {
+            result = response.body().string().toString()
+        }
+        return result
     }
 
     override fun cancel(tag: String) {

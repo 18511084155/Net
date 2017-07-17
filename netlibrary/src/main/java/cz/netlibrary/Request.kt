@@ -96,9 +96,24 @@ fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBu
         }
     }
 }
-
 fun<T> Activity.request(action:String?=null, request: RequestBuilder<T>.()->Unit)=request(null,action,request)
 
+/**
+ * activity
+ */
+fun<T> Activity.syncRequest(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
+    val item = getRequestItem(action, request)
+    interceptRequest(applicationContext,item.config,item.handler){
+        RequestClient.syncRequest(getAnyTag(tag,this),item){
+            val className=this::class.java.simpleName
+            val condition=!item.contextDetection or
+                    if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) null!=window.decorView.windowToken else !isDestroyed||null!=window.decorView.windowToken
+            HttpLog.log{ append("Activity:$className Tag:$tag 上下文检测:$condition ") }
+            condition
+        }
+    }
+}
+fun<T> Activity.syncRequest(action:String?=null, request: RequestBuilder<T>.()->Unit)=syncRequest(null,action,request)
 
 fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
@@ -117,7 +132,24 @@ fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBu
     }
 }
 
+/**
+ * v4 fragment
+ */
+fun<T> Fragment.syncRequest(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
+    val item = getRequestItem(action, request)
+    interceptRequest(context,item.config,item.handler){
+        RequestClient.syncRequest(getAnyTag(tag,this),item){
+            val className=this::class.java.simpleName
+            val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
+            HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
+            condition
+        }
+    }
+}
+
 fun<T> Fragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(null,action,request)
+
+fun<T> Fragment.syncRequest(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=syncRequest(null,action,request)
 
 fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
@@ -141,7 +173,7 @@ fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()
 fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
 
 /**
- * any item dialogFragment
+ * any item
  */
 inline fun<reified I, T> I.request(tag:String?=null, action:String?=null, context:Context, noinline request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
@@ -153,7 +185,6 @@ inline fun<reified I, T> I.request(tag:String?=null, action:String?=null, contex
 inline fun<reified I,T> I.request(action:String?=null,context:Context,noinline request: RequestBuilder<T>.()->Unit):Unit=request(null,action,context,request)
 
 inline fun<reified I> I.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this as Any)
-
 
 /**
  * 请求前置处理
