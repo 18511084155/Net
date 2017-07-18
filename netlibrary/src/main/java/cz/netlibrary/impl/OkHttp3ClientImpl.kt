@@ -134,7 +134,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         }
         HttpLog.log { append("请求url:$url \n") }
         //add extras param
-        requestConfig.extrasParams?.let {  item.params.putAll(it) }
+        requestConfig.requestExtrasCallback?.invoke()?.let {  item.params.putAll(it) }
         var request=when(item.method){
             RequestMethod.post, RequestMethod.put-> getMultipartRequest(tag,url,item)
             RequestMethod.get->getGetRequest(tag,url,item)
@@ -198,7 +198,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             headerBuilder.append(it.key + "=" + it.value + ";")
             requestBuilder.addHeader(it.key, it.value)
         }
-        requestConfig.extrasHeader?.let {
+        requestConfig.requestHeaderCallback?.invoke()?.let {
             it.forEach {
                 headerBuilder.append(it.key + "=" + it.value + ";")
                 requestBuilder.addHeader(it.key, it.value)
