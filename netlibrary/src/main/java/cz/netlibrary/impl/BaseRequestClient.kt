@@ -64,14 +64,14 @@ abstract class BaseRequestClient<out T> {
         //此设计在应用requestItem之前,可以全局拦截,修改信息
         val requestUrl = requestConfig.applyRequest?.invoke(this)?.url
         val absoluteUrl: String
-        if(null!=requestUrl){
+        if (!url.startsWith("http")) {
+            absoluteUrl = requestConfig.url+url
+        } else if(null!=requestUrl){
             if(!Patterns.WEB_URL.matcher(requestUrl).matches()){
                 throw IllegalArgumentException("error $requestUrl when call pre!")
             } else {
                 absoluteUrl=requestUrl
             }
-        } else if (!url.startsWith("http")) {
-            absoluteUrl = requestConfig.url+url
         } else {
             absoluteUrl = url
         }
