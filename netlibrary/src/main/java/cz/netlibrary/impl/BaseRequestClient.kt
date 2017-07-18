@@ -67,11 +67,7 @@ abstract class BaseRequestClient<out T> {
         if (!url.startsWith("http")) {
             absoluteUrl = requestConfig.url+url
         } else if(null!=requestUrl){
-            if(!Patterns.WEB_URL.matcher(requestUrl).matches()){
-                throw IllegalArgumentException("error $requestUrl when call pre!")
-            } else {
-                absoluteUrl=requestUrl
-            }
+            absoluteUrl=requestUrl
         } else {
             absoluteUrl = url
         }
