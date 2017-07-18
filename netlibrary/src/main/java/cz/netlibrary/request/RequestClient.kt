@@ -65,7 +65,7 @@ object RequestClient{
                             HttpLog.log { append("回调线程:$mainThread\n") }
                             executeOnThread {
                                 item?.let {
-                                    handler.success.invoke(it)
+                                    handler.success?.invoke(it)
                                     handler.successCallback?.onSuccess(it)
                                 }
                             }
@@ -101,7 +101,7 @@ object RequestClient{
             }
         }
         fun callFailed(exception: HttpException){
-            handler.failed.invoke(exception)
+            handler.failed?.invoke(exception)
             handler.failedCallback?.onFailed(exception)
         }
         /**

@@ -64,13 +64,13 @@ class RequestBuilder<T>{
     }
 
     //完成回调
-    fun success(callback:RequestSuccessCallback<T>?=null,success: (T) -> Unit){
+    fun success(callback:RequestSuccessCallback<T>?=null,success: ((T) -> Unit)?=null){
         this.handler.successCallback=callback
         this.handler.success=success
     }
 
     //请求失败回调
-    fun failed(callback:RequestFailCallback?=null,failed:(HttpException) -> Unit){
+    fun failed(callback:RequestFailCallback?=null,failed:((HttpException) -> Unit)?=null){
         this.handler.failedCallback=callback
         this.handler.failed=failed
     }
