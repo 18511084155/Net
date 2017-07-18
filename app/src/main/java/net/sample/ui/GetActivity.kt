@@ -54,11 +54,12 @@ class GetActivity : AppCompatActivity() {
                 SystemClock.sleep(2*1000)
                 it
             }
-            success(object :RequestSuccessCallback<String>{
+            successItem=object :RequestSuccessCallback<String>{
                 override fun onSuccess(item: String) {
                     contentView.append("Done\n")
                 }
-            }){
+            }
+            success{
                 contentView.append(formatter.format(it).reduce { acc, s -> acc+s })
             }
             failed {

@@ -20,6 +20,13 @@ class RequestBuilder<T>{
     internal var lifeCycle: ((RequestLifeCycle)->Unit)?=null
     internal var lifeCycleItem: LifeCycleCallback?=null
     internal var lifeCycleCondition:(()->Boolean)?=null
+
+    var successItem:RequestSuccessCallback<T>?=null
+        set(value) { handler.successCallback=value }
+
+    var failedItem:RequestFailCallback?=null
+        set(value) { handler.failedCallback=value }
+
     //模板请求参数
     var params= arrayOf<Any?>()
     //模板插值
@@ -64,14 +71,12 @@ class RequestBuilder<T>{
     }
 
     //完成回调
-    fun success(callback:RequestSuccessCallback<T>?=null,success: ((T) -> Unit)?=null){
-        this.handler.successCallback=callback
+    fun success(success: ((T) -> Unit)?=null){
         this.handler.success=success
     }
 
     //请求失败回调
-    fun failed(callback:RequestFailCallback?=null,failed:((HttpException) -> Unit)?=null){
-        this.handler.failedCallback=callback
+    fun failed(failed:((HttpException) -> Unit)?=null){
         this.handler.failed=failed
     }
     //无网络
