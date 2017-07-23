@@ -1,12 +1,7 @@
 package cz.netlibrary.request
 
-import android.app.Activity
-import android.content.Context
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.support.v4.app.Fragment
-import cz.netlibrary.*
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.impl.BaseRequestClient
@@ -38,6 +33,8 @@ object RequestClient{
     class HttpRequestCallback<T>(val requestItem: RequestBuilder<T>,val contextCondition:()->Boolean):RequestCallback<Response>{
         val abortOnError = BaseRequestClient.requestConfig.abortOnError
         val errorMessage = BaseRequestClient.requestConfig.errorMessage
+        val conditionCallback = BaseRequestClient.requestConfig.requestConditionCallback
+        val requestSuccessCallback=BaseRequestClient.requestConfig.requestSuccessCallback
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
         init {
@@ -50,8 +47,10 @@ object RequestClient{
                 lifeCycleCall(RequestLifeCycle.BEFORE_CALL)
                 executeOnError {
                     HttpLog.log { append("请求成功:${response.request().url()}") }
-                    val item = handler.map?.invoke(result)?:null
-                    if(null==item){
+                    //此处requestSuccessCallback可将结果再做二次转换比如:{message:"" code:"",item:{}} 提取出item,再交给map转换
+                    val convertValue=requestSuccessCallback?.invoke(result)?:result
+                    val item = handler.map?.invoke(convertValue)?:null
+                    if(null==item||!(conditionCallback?.invoke(result)?:false)){
                         executeOnThread {
                             HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
                             callFailed(HttpException(-1,errorMessage?:"数据处理失败!"))
