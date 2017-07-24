@@ -16,6 +16,10 @@ class RequestBuilder<T>{
     var mainThread=true
     //检测上下文
     var contextDetection =true
+    //不转换,如果设置了请求成功转换函数,此处动态调定不转换
+    var passConvert=false
+    //如果设置了请求成功校验函数,此处动态调定不校验
+    var passCondition=false
     //请求生命周期
     internal var lifeCycle: ((RequestLifeCycle)->Unit)?=null
     internal var lifeCycleItem: LifeCycleCallback?=null

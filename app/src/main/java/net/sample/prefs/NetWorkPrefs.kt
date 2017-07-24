@@ -13,7 +13,7 @@ object NetWorkPrefs {
             item {
                 action = RAIL_WAY_TRAIN
                 info = "火车票车次查询"
-                url = "train/tickets/queryByTrainNo?"
+                url = "train/tickets/%s/queryByTrainNo?"
                 method=RequestMethod.post
                 params = arrayOf("key", "trainno")
             }

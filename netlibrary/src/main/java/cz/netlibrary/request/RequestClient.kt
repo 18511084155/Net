@@ -2,6 +2,7 @@ package cz.netlibrary.request
 
 import android.os.Handler
 import android.os.Looper
+import android.text.TextUtils
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.impl.BaseRequestClient
@@ -31,9 +32,12 @@ object RequestClient{
 
 
     class HttpRequestCallback<T>(val requestItem: RequestBuilder<T>,val contextCondition:()->Boolean):RequestCallback<Response>{
+        var passConvert = requestItem.passConvert
+        var passCondition = requestItem.passCondition
         val abortOnError = BaseRequestClient.requestConfig.abortOnError
         val errorMessage = BaseRequestClient.requestConfig.errorMessage
         val conditionCallback = BaseRequestClient.requestConfig.requestConditionCallback
+        val requestErrorCallback=BaseRequestClient.requestConfig.requestErrorCallback
         val requestSuccessCallback=BaseRequestClient.requestConfig.requestSuccessCallback
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
@@ -48,24 +52,38 @@ object RequestClient{
                 executeOnError {
                     HttpLog.log { append("请求成功:${response.request().url()}") }
                     //此处requestSuccessCallback可将结果再做二次转换比如:{message:"" code:"",item:{}} 提取出item,再交给map转换
-                    val convertValue=requestSuccessCallback?.invoke(result)?:result
-                    val item = handler.map?.invoke(convertValue)?:null
-                    if(null==item||!(conditionCallback?.invoke(result)?:false)){
-                        executeOnThread {
-                            HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
-                            callFailed(HttpException(-1,errorMessage?:"数据处理失败!"))
+                    var convertValue=result
+                    if(!passConvert&&null!=requestSuccessCallback){
+                        convertValue=requestSuccessCallback.invoke(result)
+                    }
+                    if(TextUtils.isEmpty(convertValue)){
+                        HttpLog.log { append("空数据$result\n") }
+                        if(null==requestErrorCallback){
+                            executeOnThread { callFailed(HttpException(-1,errorMessage?:"请求没有结果!")) }
+                        } else{
+                            executeOnThread { callFailed(requestErrorCallback.invoke(-1,result)) }
                         }
                     } else {
-                        HttpLog.log { append("数据处理:${item?.toString()}\n") }
-                        //回调处理结果
-                        if (!contextCondition.invoke()) {
-                            lifeCycleCall(RequestLifeCycle.CANCEL)
-                        } else {
-                            HttpLog.log { append("回调线程:$mainThread\n") }
+                        val item = handler.map?.invoke(convertValue)?:null
+                        //如果设定跳过检测,即使数据处理失败,也为请求成功
+                        val condition=if(null!=conditionCallback&&!passCondition) conditionCallback.invoke(result) else true
+                        if(null==item||!condition){
                             executeOnThread {
-                                item?.let {
-                                    handler.success?.invoke(it)
-                                    handler.successCallback?.onSuccess(it)
+                                HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
+                                callFailed(HttpException(-1,errorMessage?:"数据处理失败!"))
+                            }
+                        } else {
+                            HttpLog.log { append("数据处理:${item?.toString()}\n") }
+                            //回调处理结果
+                            if (!contextCondition.invoke()) {
+                                lifeCycleCall(RequestLifeCycle.CANCEL)
+                            } else {
+                                HttpLog.log { append("回调线程:$mainThread\n") }
+                                executeOnThread {
+                                    item?.let {
+                                        handler.success?.invoke(it)
+                                        handler.successCallback?.onSuccess(it)
+                                    }
                                 }
                             }
                         }
@@ -95,7 +113,7 @@ object RequestClient{
                     Thread.currentThread().stackTrace.forEach { append(it.toString()+"\n") }
                 }
                 executeOnThread { callFailed(exception) }
-                lifeCycleCall(RequestLifeCycle.AFTER_CALL)
+                lifeCycleCall(RequestLifeCycle.AFTER_FAILED)
                 lifeCycleCall(RequestLifeCycle.FINISH)
             }
         }
