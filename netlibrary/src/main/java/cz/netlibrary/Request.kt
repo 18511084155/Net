@@ -190,12 +190,11 @@ inline fun<reified I> I.cancelRequest(tag:String?=null)=RequestClient.cancel(tag
  * 请求前置处理
  */
 fun<T> interceptRequest(context:Context?,item:RequestConfig,handler:RequestHandler<T>, closure:()->Unit){
+    val enableNetwork=enableNetWork(context)
     val interceptor = BaseRequestClient.requestConfig?.networkInterceptor?.invoke(item)
-    if(null==interceptor||!interceptor){
+    if(enableNetwork&&(null==interceptor||!interceptor)){
         closure.invoke()
-    } else if(enableNetWork(context)){
-        closure.invoke()
-    } else {
+    } else if(!enableNetwork){
         //无网络
         handler.noNetWork.invoke()
     }

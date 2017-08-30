@@ -53,7 +53,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             call = httpClient.newCall(request)
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    callItems.remove(tag)
+                    cancel(tag)
                     HttpLog.log { append("请求失败:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
                     val httpException=HttpException(-1,errorMessage?:e.message)
                     callback?.onFailed(httpException)
@@ -62,7 +62,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
 
                 @Throws(IOException::class)
                 override fun onResponse(call: Call, response: Response) {
-                    callItems.remove(tag)
+                    cancel(tag)
                     handleResponse(tag, response, request.url().toString(), st, callback)
                 }
             })
