@@ -3,6 +3,7 @@ package cz.netlibrary.request
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
+import cz.netlibrary.OPERATION_FAILED
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.impl.BaseRequestClient
@@ -17,9 +18,13 @@ import okhttp3.Response
 object RequestClient{
     val client= OkHttp3ClientImpl()
 
-    fun<T> syncRequest(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean)=client.syncCall(tag,requestItem.config,HttpRequestCallback(requestItem,contextCondition))
+    fun<T> syncRequest(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean){
+        client.syncCall(tag,requestItem.config,HttpRequestCallback(requestItem,contextCondition))
+    }
 
-    fun<T> request(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean)=client.call(tag,requestItem.config,HttpRequestCallback(requestItem,contextCondition))
+    fun<T> request(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean){
+        client.call(tag,requestItem.config,HttpRequestCallback(requestItem,contextCondition))
+    }
 
     fun cancel(tag:String?=null,any:Any){
         client.cancel(if(null!=tag) any.javaClass.simpleName+tag else any.javaClass.simpleName)
@@ -32,13 +37,14 @@ object RequestClient{
 
 
     class HttpRequestCallback<T>(val requestItem: RequestBuilder<T>,val contextCondition:()->Boolean):RequestCallback<Response>{
+        val requestConfig=BaseRequestClient.requestConfig
         var passConvert = requestItem.passConvert
         var passCondition = requestItem.passCondition
-        val abortOnError = BaseRequestClient.requestConfig.abortOnError
-        val errorMessage = BaseRequestClient.requestConfig.errorMessage
-        val conditionCallback = BaseRequestClient.requestConfig.requestConditionCallback
-        val requestErrorCallback=BaseRequestClient.requestConfig.requestErrorCallback
-        val requestSuccessCallback=BaseRequestClient.requestConfig.requestSuccessCallback
+        val abortOnError = requestConfig.abortOnError
+        val errorMessage = requestConfig.errorMessage
+        val conditionCallback = requestConfig.requestConditionCallback
+        val requestErrorCallback=requestConfig.requestErrorCallback
+        val requestSuccessCallback=requestConfig.requestSuccessCallback
         val mainThread= requestItem.mainThread
         val handler= requestItem.handler
         init {
@@ -58,11 +64,7 @@ object RequestClient{
                     }
                     if(TextUtils.isEmpty(convertValue)){
                         HttpLog.log { append("空数据$result\n") }
-                        if(null==requestErrorCallback){
-                            executeOnThread { callFailed(HttpException(-1,errorMessage?:"请求没有结果!")) }
-                        } else{
-                            executeOnThread { callFailed(requestErrorCallback.invoke(-1,result)) }
-                        }
+                        executeOnThread { callFailed(OPERATION_FAILED,errorMessage?:"请求没有结果!") }
                     } else {
                         val item = handler.map?.invoke(convertValue)?:null
                         //如果设定跳过检测,即使数据处理失败,也为请求成功
@@ -70,7 +72,7 @@ object RequestClient{
                         if(null==item||!condition){
                             executeOnThread {
                                 HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
-                                callFailed(HttpException(-1,errorMessage?:"数据处理失败!"))
+                                callFailed(OPERATION_FAILED,errorMessage?:"数据处理失败!")
                             }
                         } else {
                             HttpLog.log { append("数据处理:${item?.toString()}\n") }
@@ -91,7 +93,7 @@ object RequestClient{
                 }?.apply {
                     executeOnThread {
                         HttpLog.log { append("请求成功但执行异常:$message\n") }
-                        callFailed(HttpException(-1,errorMessage?:message))
+                        callFailed(OPERATION_FAILED,errorMessage?:message)
                     }
                 }
                 lifeCycleCall(RequestLifeCycle.AFTER_CALL)
@@ -99,7 +101,7 @@ object RequestClient{
             }
         }
 
-        override fun onFailed(exception: HttpException) {
+        override fun onFailed(code:Int,message:String?,result:String?) {
             if(!contextCondition.invoke()){
                 lifeCycleCall(RequestLifeCycle.CANCEL)
             } else {
@@ -107,17 +109,23 @@ object RequestClient{
                 lifeCycleCall(RequestLifeCycle.BEFORE_FAILED)
                 HttpLog.log { append("异常回调线程:$mainThread\n") }
                 HttpLog.log {
-                    append("\tcode:${exception.code}\n")
-                    append("\tmessage:${exception.message}\n")
+                    append("\tcode:$code\n")
+                    append("\tresult:$result\n")
                     append("-----------------------------stackTrace-----------------------------\n")
                     Thread.currentThread().stackTrace.forEach { append(it.toString()+"\n") }
                 }
-                executeOnThread { callFailed(exception) }
+                executeOnThread { callFailed(code,message,result) }
                 lifeCycleCall(RequestLifeCycle.AFTER_FAILED)
                 lifeCycleCall(RequestLifeCycle.FINISH)
             }
         }
-        fun callFailed(exception: HttpException){
+        fun callFailed(code:Int,message:String?,result:String?=null){
+            var exception:HttpException
+            if (null == requestErrorCallback) {
+                exception=HttpException(code, message)
+            } else {
+                exception=requestErrorCallback.invoke(code, message, result)
+            }
             handler.failed?.invoke(exception)
             handler.failedCallback?.onFailed(exception)
         }

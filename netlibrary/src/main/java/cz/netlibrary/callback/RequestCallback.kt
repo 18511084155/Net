@@ -7,5 +7,5 @@ import cz.netlibrary.exception.HttpException
  */
 interface RequestCallback<in T> {
     fun onSuccess(response:T, code:Int, result:String, time:Long)
-    fun onFailed(exception:HttpException)
+    fun onFailed(code:Int,message:String?,result:String?)
 }

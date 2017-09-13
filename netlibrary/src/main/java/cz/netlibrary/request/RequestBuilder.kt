@@ -33,6 +33,8 @@ class RequestBuilder<T>{
 
     //模板请求参数
     var params= arrayOf<Any?>()
+    //附加参数集
+    var ext:HashMap<String,String>?=null
     //模板插值
     var pathValue:Array<String>?=null
     //模板请求entity

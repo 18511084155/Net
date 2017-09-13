@@ -27,6 +27,9 @@ fun Application.init(closure: HttpRequestConfig.()->Unit){
     HttpLog.httpLog=BaseRequestClient.requestConfig.httpLog
 }
 
+//操作失败
+val REQUEST_FAILED=-2
+val OPERATION_FAILED=-1
 val JSON_MEDIA_TYPE:String="application/json; charset=utf-8"
 
 fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): RequestBuilder<T> {
@@ -66,6 +69,8 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
                     filter { null!=it.second }.
                     forEach { (first, second) -> config.params[first]=second  }
         }
+        //附加参数
+        requestBuilder.ext?.let { config.params.putAll(it) }
     }
     HttpLog.log{
         append("请求信息:${String.format(config.url,config.pathValue)}-----------------\n")
@@ -168,21 +173,15 @@ fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: Req
     }
 }
 
-fun<T> DialogFragment.request(action:String?=null, request: RequestBuilder<T>.()->Unit):Unit=request(null,action,request)
-
-fun DialogFragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
-
 /**
  * any item
  */
-inline fun<reified I, T> I.request(tag:String?=null, action:String?=null, context:Context, noinline request: RequestBuilder<T>.()->Unit){
+inline fun<T> Any.request(context:Context,tag:String?=null, action:String?=null,noinline request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
     interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this as Any), item){ true }
+        RequestClient.request(getAnyTag(tag,this), item){ true }
     }
 }
-
-inline fun<reified I,T> I.request(action:String?=null,context:Context,noinline request: RequestBuilder<T>.()->Unit):Unit=request(null,action,context,request)
 
 inline fun<reified I> I.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this as Any)
 

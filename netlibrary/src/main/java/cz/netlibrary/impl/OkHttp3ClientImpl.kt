@@ -1,8 +1,9 @@
 package cz.netlibrary.impl
 
 import android.text.TextUtils
+import cz.netlibrary.OPERATION_FAILED
+import cz.netlibrary.REQUEST_FAILED
 import cz.netlibrary.callback.RequestCallback
-import cz.netlibrary.exception.HttpException
 import cz.netlibrary.log.HttpLog
 import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestMethod
@@ -30,13 +31,8 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             handleResponse(tag, response, request.url().toString(), st, callback)
         } catch (e: Exception) {
             //request failed
-            if(null!=response){
-                HttpLog.log { append("请求失败:${response?.request()?.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
-                callback?.onFailed(HttpException(response.code(),getResponseResult(response)))
-            } else {
-                HttpLog.log { append("请求操作异常:${e.message}\n") }
-                callback?.onFailed(HttpException(-1,errorMessage?:e.message))
-            }
+            HttpLog.log { append("请求操作异常:${e.message} 耗时:${System.currentTimeMillis() - st} 移除Tag:$tag\n") }
+            callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
         } finally {
             callItems.remove(tag)
         }
@@ -53,16 +49,14 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             call = httpClient.newCall(request)
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    cancel(tag)
+                    removeTag(tag)
                     HttpLog.log { append("请求失败:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
-                    val httpException=HttpException(-1,errorMessage?:e.message)
-                    callback?.onFailed(httpException)
-                    requestConfig.requestCallback?.invoke(null,-1,httpException)
+                    callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
                 }
 
                 @Throws(IOException::class)
                 override fun onResponse(call: Call, response: Response) {
-                    cancel(tag)
+                    removeTag(tag)
                     handleResponse(tag, response, request.url().toString(), st, callback)
                 }
             })
@@ -70,7 +64,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             //request failed
             call=null
             HttpLog.log { append("请求操作异常:${e.message}\n") }
-            callback?.onFailed(HttpException(-1,errorMessage?:e.message))
+            callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
         }
         call?.let {
             if(null==callItems[tag]){
@@ -84,21 +78,18 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         }
     }
 
+    private fun callFailed(callback:RequestCallback<Response>?,code:Int,message:String?,result:String?=null)=callback?.onFailed(code,message,result)
+
     private fun handleResponse(tag: String, response: Response, url:String, st: Long, callback: RequestCallback<Response>?) {
         var result: String = getResponseResult(response)
         val code = response.code()
         HttpLog.log { append("请求成功:$url\n请求返回值:$code\n耗时:${System.currentTimeMillis() - st} 移除:Tag:$tag\n") }
         if (200 == code) {
-            callback?.onSuccess(response, response.code(), result, (System.currentTimeMillis() - st))
-            requestConfig.requestCallback?.invoke(result, response.code(), null)
+            callback?.onSuccess(response, code, result, (System.currentTimeMillis() - st))
+            requestConfig.requestCallback?.invoke(result, code, null)
         } else {
             HttpLog.log { append("请求异常:$code\n结果$result\n") }
-            val requestErrorCallback = requestConfig.requestErrorCallback
-            if (null == requestErrorCallback) {
-                callback?.onFailed(HttpException(code, result))
-            } else {
-                callback?.onFailed(requestErrorCallback.invoke(code, result))
-            }
+            callFailed(callback,REQUEST_FAILED,null,result)
         }
     }
 
@@ -110,9 +101,17 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
         if (null != response.cacheResponse()) {
             result = response.cacheResponse().toString()
         } else {
-            result = response.body().string().toString()
+            result = response.body().string()
         }
         return result
+    }
+
+    private fun removeTag(tag:String){
+        try{
+            callItems.remove(tag)
+        } catch (e:Exception){
+            e.printStackTrace()
+        }
     }
 
     override fun cancel(tag: String) {

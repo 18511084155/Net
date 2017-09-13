@@ -21,7 +21,7 @@ class HttpRequestConfig {
     internal var requestExtrasCallback:(()->MutableMap<String,String>)?=null //附加参数
     internal var requestHeaderCallback:(()->MutableMap<String,String>)?=null //附加头信息
     internal var requestSuccessCallback:((String)->String)?=null
-    internal var requestErrorCallback:((Int,String)->HttpException)?=null
+    internal var requestErrorCallback:((Int,String?,String?)->HttpException)?=null
     internal var requestConditionCallback:((String)->Boolean)?=null
     internal var applyRequest:(RequestConfig.()->RequestConfig)?=null
     internal var networkInterceptor:(RequestConfig.()->Boolean)?=null
@@ -45,6 +45,6 @@ class HttpRequestConfig {
         this.requestSuccessCallback=action
     }
     //异常数据处理器
-    fun requestErrorCallback(action:(Int,String)->HttpException){ requestErrorCallback=action}
+    fun requestErrorCallback(action:(Int,String?,String?)->HttpException){ requestErrorCallback=action}
 
 }

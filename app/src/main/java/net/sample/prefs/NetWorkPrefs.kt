@@ -8,6 +8,7 @@ import cz.netlibrary.model.RequestMethod
  */
 object NetWorkPrefs {
     val RAIL_WAY_TRAIN="rail_way_train"
+    val WEATHER="weather"
     init {
         Configuration.init {
             item {
@@ -18,7 +19,10 @@ object NetWorkPrefs {
                 params = arrayOf("key", "trainno")
             }
             item {
-
+                action = WEATHER
+                info = "天气查询"
+                url = "v1/weather/query?"
+                params = arrayOf("key", "city","province")
             }
 
         }

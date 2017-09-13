@@ -13,6 +13,7 @@ import kotlinx.android.synthetic.main.fragment_template.*
 import net.sample.ProgressDialogLifeCycle
 import net.sample.R
 import net.sample.prefs.NetWorkPrefs
+import net.sample.utils.ConfigManager
 import org.jetbrains.anko.sdk25.coroutines.onClick
 
 /**
@@ -32,20 +33,21 @@ class TemplateFragment:Fragment(){
     fun templateRequest(){
         val formatter= JsonPrinter()
         formatter.setLogConfig(LogConfig.get())
-        request<String>(NetWorkPrefs.RAIL_WAY_TRAIN) {
-            params= arrayOf(APP_KEY,"G2")
-            map{
-                //延持时间,检测上下文是否存在
-                SystemClock.sleep(1*1000)
-                it
-            }
-            lifeCycleItem(ProgressDialogLifeCycle(context,"加载中")){true}
-            success {
-                contentView.text=formatter.format(it).reduce { acc, s -> acc+s }
-            }
-            failed { (code,message)->
-                contentView.text=message
-            }
-        }
+        ConfigManager.request(context)
+//        request<String>(NetWorkPrefs.RAIL_WAY_TRAIN) {
+//            params= arrayOf(APP_KEY,"G2")
+//            map{
+//                //延持时间,检测上下文是否存在
+//                SystemClock.sleep(1*1000)
+//                it
+//            }
+//            lifeCycleItem(ProgressDialogLifeCycle(context,"加载中")){true}
+//            success {
+//                contentView.text=formatter.format(it).reduce { acc, s -> acc+s }
+//            }
+//            failed { (code,message)->
+//                contentView.text=message
+//            }
+//        }
     }
 }
