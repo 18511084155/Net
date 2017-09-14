@@ -6,9 +6,9 @@ import android.text.TextUtils
 import cz.netlibrary.OPERATION_FAILED
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.exception.HttpException
-import cz.netlibrary.impl.BaseRequestClient
 import cz.netlibrary.impl.OkHttp3ClientImpl
 import cz.netlibrary.log.HttpLog
+import cz.netlibrary.requestConfig
 import okhttp3.Response
 
 /**
@@ -37,7 +37,6 @@ object RequestClient{
 
 
     class HttpRequestCallback<T>(val requestItem: RequestBuilder<T>,val contextCondition:()->Boolean):RequestCallback<Response>{
-        val requestConfig=BaseRequestClient.requestConfig
         var passConvert = requestItem.passConvert
         var passCondition = requestItem.passCondition
         val abortOnError = requestConfig.abortOnError

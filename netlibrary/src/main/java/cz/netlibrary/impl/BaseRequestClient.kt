@@ -4,6 +4,7 @@ import android.util.Patterns
 import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.configradtion.HttpRequestConfig
 import cz.netlibrary.model.RequestConfig
+import cz.netlibrary.requestConfig
 import okhttp3.Cache
 import okhttp3.Interceptor
 import okhttp3.MediaType
@@ -20,7 +21,6 @@ abstract class BaseRequestClient<out T> {
         val TEXT = MediaType.parse("Content-Type application/x-www-form-")
         val STREAM = MediaType.parse("application/octet-stream")
         val httpClient: OkHttpClient
-        var requestConfig: HttpRequestConfig = HttpRequestConfig()
         init {
             val interceptor = Interceptor { chain ->
                 val originalResponse = chain.proceed(chain.request())

@@ -7,6 +7,7 @@ import cz.netlibrary.callback.RequestCallback
 import cz.netlibrary.log.HttpLog
 import cz.netlibrary.model.RequestConfig
 import cz.netlibrary.model.RequestMethod
+import cz.netlibrary.requestConfig
 import okhttp3.*
 import java.io.File
 import java.io.IOException

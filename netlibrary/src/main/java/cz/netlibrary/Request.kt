@@ -21,16 +21,19 @@ import cz.netlibrary.request.RequestHandler
  * Created by cz on 2017/6/7.
  * activity/fragment扩展网络操作,以及配置
  */
-fun Application.init(closure: HttpRequestConfig.()->Unit){
-    //配置的全局网格信息
-    BaseRequestClient.requestConfig = HttpRequestConfig().apply(closure)
-    HttpLog.httpLog=BaseRequestClient.requestConfig.httpLog
-}
-
 //操作失败
 val REQUEST_FAILED=-2
 val OPERATION_FAILED=-1
 val JSON_MEDIA_TYPE:String="application/json; charset=utf-8"
+internal var requestConfig = HttpRequestConfig()
+
+fun Application.init(closure: HttpRequestConfig.()->Unit){
+    //配置的全局网格信息
+    requestConfig = HttpRequestConfig().apply(closure)
+    //设置日志
+    HttpLog.httpLog=requestConfig.httpLog
+}
+
 
 fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): RequestBuilder<T> {
     var requestItem: RequestItem? =null
@@ -190,7 +193,7 @@ inline fun<reified I> I.cancelRequest(tag:String?=null)=RequestClient.cancel(tag
  */
 fun<T> interceptRequest(context:Context?,item:RequestConfig,handler:RequestHandler<T>, closure:()->Unit){
     val enableNetwork=enableNetWork(context)
-    val interceptor = BaseRequestClient.requestConfig?.networkInterceptor?.invoke(item)
+    val interceptor = requestConfig.networkInterceptor?.invoke(item)
     if(enableNetwork&&(null==interceptor||!interceptor)){
         closure.invoke()
     } else if(!enableNetwork){
