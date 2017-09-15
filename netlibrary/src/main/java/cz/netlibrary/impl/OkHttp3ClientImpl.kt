@@ -29,7 +29,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             HttpLog.log { append("发起请求:${request.url()}\n") }
             call = httpClient.newCall(request)
             response = call.execute()
-            handleResponse(tag, response, request.url().toString(), st, callback)
+            handleResponse(tag, response, request.url().toString(), callback)
         } catch (e: Exception) {
             //request failed
             HttpLog.log { append("请求操作异常:${e.message} 耗时:${System.currentTimeMillis() - st} 移除Tag:$tag\n") }
@@ -58,7 +58,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
                 @Throws(IOException::class)
                 override fun onResponse(call: Call, response: Response) {
                     removeTag(tag)
-                    handleResponse(tag, response, request.url().toString(), st, callback)
+                    handleResponse(tag, response, request.url().toString(), callback)
                 }
             })
         } catch (e: Exception) {
@@ -74,19 +74,20 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             callItems[tag]?.add(it)
             HttpLog.log {
                 append("请求添加Tag:$tag\n")
-                append("当前网络请求数:${callItems.map { it.value.size }.fold(0){total, next -> total + next}}\n")
+                append("当前网络请求数:${callItems.flatMap { it.value}.count()}\n")
             }
         }
     }
 
     private fun callFailed(callback:RequestCallback<Response>?,code:Int,message:String?,result:String?=null)=callback?.onFailed(code,message,result)
 
-    private fun handleResponse(tag: String, response: Response, url:String, st: Long, callback: RequestCallback<Response>?) {
+    private fun handleResponse(tag: String, response: Response, url:String, callback: RequestCallback<Response>?) {
         var result: String = getResponseResult(response)
+        val time=response.receivedResponseAtMillis()-response.sentRequestAtMillis()
         val code = response.code()
-        HttpLog.log { append("请求成功:$url\n请求返回值:$code\n耗时:${System.currentTimeMillis() - st} 移除:Tag:$tag\n") }
+        HttpLog.log { append("请求成功:$url\n请求返回值:$code\n耗时:$time 移除:Tag:$tag\n") }
         if (200 == code) {
-            callback?.onSuccess(response, code, result, (System.currentTimeMillis() - st))
+            callback?.onSuccess(response, code, result, time)
             requestConfig.requestCallback?.invoke(result, code, null)
         } else {
             HttpLog.log { append("请求异常:$code\n结果$result\n") }
