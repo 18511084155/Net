@@ -18,6 +18,11 @@ import okhttp3.Response
 object RequestClient{
     val client= OkHttp3ClientImpl()
 
+    /**
+     * 获得请求对象
+     */
+    fun getHttpClient()= client.getHttpClient()
+
     fun<T> syncRequest(tag:String, requestItem: RequestBuilder<T>, contextCondition:()->Boolean){
         client.syncCall(tag,requestItem.config,HttpRequestCallback(requestItem,contextCondition))
     }

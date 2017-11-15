@@ -2,6 +2,7 @@ package cz.netlibrary.configradtion
 
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.model.RequestConfig
+import okhttp3.Interceptor
 import java.io.File
 
 /**
@@ -18,6 +19,7 @@ class HttpRequestConfig {
     var cachedFile: File? = null //缓存目录
     var maxCacheSize: Long = 10*1024*1024 //最大缓存信息
     var retryOnConnectionFailure=false //异常重试
+    var interceptItems:Array<Interceptor>?=null//额外的拦截器
     internal var requestExtrasCallback:(()->MutableMap<String,String>)?=null //附加参数
     internal var requestHeaderCallback:(()->MutableMap<String,String>)?=null //附加头信息
     internal var requestSuccessCallback:((String)->String)?=null

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Created by cz on 2017/6/7.
  */
-abstract class BaseRequestClient<out T> {
+abstract class BaseRequestClient<out T,C> {
 
     companion object {
         val JSON = MediaType.parse("application/json; charset=utf-8")
@@ -32,6 +32,9 @@ abstract class BaseRequestClient<out T> {
                     .writeTimeout(requestConfig.writeTimeout.toLong(), TimeUnit.SECONDS)
                     .retryOnConnectionFailure(requestConfig.retryOnConnectionFailure)
                     .addNetworkInterceptor(interceptor)
+            //添加额外的拦截器
+            requestConfig.interceptItems?.forEach{clientBuilder.addInterceptor(it)}
+            //配置缓存目录
             val cachedFile = requestConfig.cachedFile
             if (null != cachedFile && cachedFile.exists()) {
                 val maxCacheSize = requestConfig.maxCacheSize
@@ -52,6 +55,11 @@ abstract class BaseRequestClient<out T> {
     abstract fun call(tag:String,item: RequestConfig,callback:RequestCallback<T>?)
 
     abstract fun syncCall(tag:String,item: RequestConfig,callback:RequestCallback<T>?):T?
+
+    /**
+     * 获得请求对象
+     */
+    abstract fun getHttpClient():C
 
     /**
      * 框架终止一个正在请求中的网络

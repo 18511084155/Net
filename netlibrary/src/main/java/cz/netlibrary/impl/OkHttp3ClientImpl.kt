@@ -16,8 +16,11 @@ import java.io.IOException
  * Created by cz on 2017/6/7.
  * okhttp3请求操作实例对象
  */
-class OkHttp3ClientImpl : BaseRequestClient<Response>() {
+class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
+
     val callItems= mutableMapOf<String,MutableList<Call>>()
+
+    override fun getHttpClient(): OkHttpClient = httpClient
     
     override fun syncCall(tag: String, item: RequestConfig, callback: RequestCallback<Response>?): Response? {
         var call:Call?
@@ -68,8 +71,8 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
         }
         call?.let {
-            if(null==callItems[tag]){
-                callItems[tag]= mutableListOf()
+            if(!callItems.containsKey(tag)){
+                callItems.put(tag,mutableListOf())
             }
             callItems[tag]?.add(it)
             HttpLog.log {
@@ -150,12 +153,12 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
     }
 
     private fun getMultipartRequest(tag: String?, url:StringBuilder, item: RequestConfig):Request{
-        var requestBody: RequestBody?
+        var requestBody: RequestBody?=null
         val entity=item.entity
         if (null != entity&&!TextUtils.isEmpty(entity.second)) {
             requestBody = RequestBody.create(MediaType.parse(entity.first), entity.second)
 //            HttpLog.d("Request entity:" + requestUrl + "\nmediaType:" + item.entity.first + "\nJson:\n" + item.entity)
-        } else {
+        } else if(!item.params.isEmpty()){
             val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
             item.params.forEach { (key,value)->
                 value?.let {
@@ -170,9 +173,11 @@ class OkHttp3ClientImpl : BaseRequestClient<Response>() {
             requestBody = builder.build()
         }
         val requestBuilder = Request.Builder().url(url.toString())
-        when(item.method){
-            RequestMethod.post->requestBuilder.post(requestBody)
-            RequestMethod.put->requestBuilder.put(requestBody)
+        if(null!=requestBody){
+            when(item.method){
+                RequestMethod.post->requestBuilder.post(requestBody)
+                RequestMethod.put->requestBuilder.put(requestBody)
+            }
         }
         initRequestBuild(tag, item, requestBuilder)
         return requestBuilder.build()

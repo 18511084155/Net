@@ -94,8 +94,9 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
  */
 fun<T> Activity.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(applicationContext,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this),item){
+        RequestClient.request(getAnyTag(tag,identityHashCode),item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection or
                     if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) null!=window.decorView.windowToken else !isDestroyed||null!=window.decorView.windowToken
@@ -111,8 +112,9 @@ fun<T> Activity.request(action:String?=null, request: RequestBuilder<T>.()->Unit
  */
 fun<T> Activity.syncRequest(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(applicationContext,item.config,item.handler){
-        RequestClient.syncRequest(getAnyTag(tag,this),item){
+        RequestClient.syncRequest(getAnyTag(tag,identityHashCode),item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection or
                     if(Build.VERSION.SDK_INT<Build.VERSION_CODES.JELLY_BEAN_MR1) null!=window.decorView.windowToken else !isDestroyed||null!=window.decorView.windowToken
@@ -130,8 +132,9 @@ fun Activity.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this),item){
+        RequestClient.request(getAnyTag(tag,identityHashCode),item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
             HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
@@ -145,8 +148,9 @@ fun<T> Fragment.request(tag:String?=null,action:String?=null, request: RequestBu
  */
 fun<T> Fragment.syncRequest(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(context,item.config,item.handler){
-        RequestClient.syncRequest(getAnyTag(tag,this),item){
+        RequestClient.syncRequest(getAnyTag(tag,identityHashCode),item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
             HttpLog.log{ append("Fragment:$className Tag:$tag 上下文检测:$condition") }
@@ -166,8 +170,9 @@ fun Fragment.cancelRequest(tag:String?=null)=RequestClient.cancel(tag,this)
  */
 fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this), item){
+        RequestClient.request(getAnyTag(tag,identityHashCode), item){
             val className=this::class.java.simpleName
             val condition=!item.contextDetection ||!isDetached&&null!=view?.windowToken
             HttpLog.log{ append("DialogFragment:$className Tag:$tag 上下文检测:$condition") }
@@ -181,8 +186,9 @@ fun<T> DialogFragment.request(tag:String?=null,action:String?=null, request: Req
  */
 inline fun<T> Any.request(context:Context,tag:String?=null, action:String?=null,noinline request: RequestBuilder<T>.()->Unit){
     val item = getRequestItem(action, request)
+    val identityHashCode=System.identityHashCode(this)
     interceptRequest(context,item.config,item.handler){
-        RequestClient.request(getAnyTag(tag,this), item){ true }
+        RequestClient.request(getAnyTag(tag,identityHashCode), item){ true }
     }
 }
 
@@ -202,7 +208,7 @@ fun<T> interceptRequest(context:Context?,item:RequestConfig,handler:RequestHandl
     }
 }
 
-fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) "${any.hashCode()}$tag" else "${any.hashCode()}"
+fun getAnyTag(tag:String?=null,any:Any):String=if(null!=tag) "$any$tag" else "$any"
 
 //----------------------------------------------------
 //网络块扩展

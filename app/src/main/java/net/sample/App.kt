@@ -5,6 +5,7 @@ import com.cz.loglibrary.JLog
 import com.cz.loglibrary.LogConfig
 import cz.netlibrary.init
 import cz.netlibrary.request
+import cz.netlibrary.request.RequestClient
 
 /**
  * Created by cz on 2017/6/7.
