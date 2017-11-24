@@ -77,7 +77,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
             callItems[tag]?.add(it)
             HttpLog.log {
                 append("请求添加Tag:$tag\n")
-                append("当前网络请求数:${callItems.flatMap { it.value}.count()}\n")
+//                append("当前网络请求数:${callItems.flatMap { it.value }.count()}\n")
             }
         }
     }
