@@ -32,6 +32,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
             HttpLog.log { append("发起请求:${request.url()}\n") }
             call = httpClient.newCall(request)
             response = call.execute()
+            HttpLog.log { append("真实请求:${request.url()}\n") }
             handleResponse(tag, response, request.url().toString(), callback)
         } catch (e: Exception) {
             //request failed
@@ -54,7 +55,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     removeTag(tag)
-                    HttpLog.log { append("请求失败:${request.url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
+                    HttpLog.log { append("请求失败:${call.request().url()}\n耗时:${System.currentTimeMillis()-st} 移除Tag:$tag\n") }
                     callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
                 }
 
