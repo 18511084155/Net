@@ -71,11 +71,8 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
             HttpLog.log { append("请求操作异常:${e.message}\n") }
             callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
         }
-        call?.let {
-            if(!callItems.containsKey(tag)){
-                callItems.put(tag,mutableListOf())
-            }
-            callItems[tag]?.add(it)
+        if(null!=tag&&null!=call){
+            callItems.getOrPut(tag){ mutableListOf() }.add(call)
             HttpLog.log {
                 append("请求添加Tag:$tag\n")
 //                append("当前网络请求数:${callItems.flatMap { it.value }.count()}\n")
@@ -92,7 +89,6 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
         HttpLog.log { append("请求成功:$url\n请求返回值:$code\n耗时:$time 移除:Tag:$tag\n") }
         if (200 == code) {
             callback?.onSuccess(response, code, result, time)
-            requestConfig.requestCallback?.invoke(result, code, null)
         } else {
             HttpLog.log { append("请求异常:$code\n结果$result\n") }
             callFailed(callback,REQUEST_FAILED,null,result)

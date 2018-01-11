@@ -69,19 +69,7 @@ abstract class BaseRequestClient<out T,C> {
     /**
      * 庳展RequestConfig,获取完整的配置url
      */
-    fun RequestConfig.getRequestUrl(): String {
-        //此设计在应用requestItem之前,可以全局拦截,修改信息
-        val requestUrl = requestConfig.applyRequest?.invoke(this)?.url
-        val absoluteUrl: String
-        if (!url.startsWith("http")) {
-            absoluteUrl = requestConfig.url+url
-        } else if(null!=requestUrl){
-            absoluteUrl=requestUrl
-        } else {
-            absoluteUrl = url
-        }
-        return absoluteUrl
-    }
+    fun RequestConfig.getRequestUrl(): String =if (!url.startsWith("http")) requestConfig.url+url else  url
 
 
 }

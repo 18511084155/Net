@@ -1,5 +1,6 @@
 package cz.netlibrary
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.content.Context
@@ -72,8 +73,8 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
                     filter { null!=it.second }.
                     forEach { (first, second) -> config.params[first]=second  }
         }
-        //附加参数
-        requestBuilder.ext?.let { config.params.putAll(it) }
+        //附加参数,并过滤掉值为空的参数
+        requestBuilder.ext?.let { config.params.putAll(it.filterValues { null!=it }) }
     }
     HttpLog.log{
         append("请求信息:${String.format(config.url,config.pathValue)}-----------------\n")
@@ -226,10 +227,10 @@ fun enableNetWork(context:Context?): Boolean {
     val context=context?:return false
     return isWifi(context) || isMobile(context)
 }
-
+@SuppressLint("MissingPermission")
 fun isWifi(context:Context?): Boolean {
     val context=context?:return false
-    var result:Boolean=false
+    var result=false
     val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
     if(systemService is ConnectivityManager){
         result=systemService.activeNetworkInfo?.type==ConnectivityManager.TYPE_WIFI
@@ -237,9 +238,10 @@ fun isWifi(context:Context?): Boolean {
     return result
 }
 
+@SuppressLint("MissingPermission")
 fun isMobile(context:Context?): Boolean {
     val context=context?:return false
-    var result:Boolean=false
+    var result=false
     val systemService = context.getSystemService(Context.CONNECTIVITY_SERVICE)
     if(systemService is ConnectivityManager){
         result=systemService.activeNetworkInfo?.type==ConnectivityManager.TYPE_MOBILE

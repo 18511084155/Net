@@ -41,16 +41,12 @@ object RequestClient{
     }
 
 
-    class HttpRequestCallback<T>(val requestItem: RequestBuilder<T>,val contextCondition:()->Boolean):RequestCallback<Response>{
-        var passConvert = requestItem.passConvert
-        var passCondition = requestItem.passCondition
-        val abortOnError = requestConfig.abortOnError
-        val errorMessage = requestConfig.errorMessage
-        val conditionCallback = requestConfig.requestConditionCallback
-        val requestErrorCallback=requestConfig.requestErrorCallback
-        val requestSuccessCallback=requestConfig.requestSuccessCallback
-        val mainThread= requestItem.mainThread
-        val handler= requestItem.handler
+    class HttpRequestCallback<T>(private val requestItem: RequestBuilder<T>, private val contextCondition:()->Boolean):RequestCallback<Response>{
+        private val abortOnError = requestConfig.abortOnError
+        private val errorMessage = requestConfig.errorMessage
+        private val requestErrorCallback=requestConfig.requestErrorCallback
+        private val mainThread= requestItem.mainThread
+        private val handler= requestItem.handler
         init {
             executeOnThread{ lifeCycleCall(RequestLifeCycle.START) }
         }
@@ -63,17 +59,21 @@ object RequestClient{
                     HttpLog.log { append("请求成功:${response.request().url()}") }
                     //此处requestSuccessCallback可将结果再做二次转换比如:{message:"" code:"",item:{}} 提取出item,再交给map转换
                     var convertValue=result
-                    if(!passConvert&&null!=requestSuccessCallback){
-                        convertValue=requestSuccessCallback.invoke(result)
-                    }
                     if(TextUtils.isEmpty(convertValue)){
                         HttpLog.log { append("空数据$result\n") }
                         executeOnThread { callFailed(OPERATION_FAILED,errorMessage?:"请求没有结果!") }
                     } else {
-                        val item = handler.map?.invoke(convertValue)?:null
-                        //如果设定跳过检测,即使数据处理失败,也为请求成功
-                        val condition=if(null!=conditionCallback&&!passCondition) conditionCallback.invoke(result) else true
-                        if(null==item||!condition){
+                        var item: T?=null
+                        try{
+                            item = handler.map?.call(convertValue)
+                        } catch (e:Exception){
+                            executeOnThread {
+                                HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
+                                callFailed(OPERATION_FAILED,e.message?:"数据处理失败!")
+                            }
+                            return@executeOnError
+                        }
+                        if(null==item){
                             executeOnThread {
                                 HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
                                 callFailed(OPERATION_FAILED,errorMessage?:"数据处理失败!")

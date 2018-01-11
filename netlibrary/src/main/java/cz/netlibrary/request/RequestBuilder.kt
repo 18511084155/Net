@@ -1,5 +1,6 @@
 package cz.netlibrary.request
 
+import cz.netlibrary.callback.FilterResult
 import cz.netlibrary.callback.LifeCycleCallback
 import cz.netlibrary.callback.RequestFailCallback
 import cz.netlibrary.callback.RequestSuccessCallback
@@ -16,8 +17,6 @@ class RequestBuilder<T>{
     var mainThread=true
     //检测上下文
     var contextDetection =true
-    //不转换,如果设置了请求成功转换函数,此处动态调定不转换
-    var passConvert=false
     //如果设置了请求成功校验函数,此处动态调定不校验
     var passCondition=false
     //请求生命周期
@@ -72,8 +71,15 @@ class RequestBuilder<T>{
     }
 
     //过滤信息
-    fun map(map: ((String) -> T)?){
-        this.handler.map=map
+    fun map(map: ((String) -> T)){
+        this.handler.map=object :FilterResult<T>{
+            override fun call(result: String)=map(result)
+        }
+    }
+
+    //扩展式的数据过滤
+    fun map(callback: FilterResult<T>){
+        this.handler.map=callback
     }
 
     //完成回调
