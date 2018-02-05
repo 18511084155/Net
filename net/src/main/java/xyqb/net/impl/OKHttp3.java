@@ -39,6 +39,7 @@ import xyqb.library.XmlElement;
 import xyqb.library.config.XmlReaderBase;
 import xyqb.net.IRequest;
 import xyqb.net.NetManager;
+import xyqb.net.callback.OnClientCreateCallback;
 import xyqb.net.exception.HttpException;
 import xyqb.net.log.HttpLog;
 import xyqb.net.model.HttpResponse;
@@ -92,7 +93,12 @@ public class OKHttp3 implements IRequest {
             }
             clientBuilder.cache(new Cache(cachedFile, maxCacheSize));
         }
+        OnClientCreateCallback createCallback = requestConfig.clientCreateCallback;
+        if(null!=createCallback){
+            createCallback.onCallback(clientBuilder);
+        }
         setSslSocketFactory(clientBuilder);
+
         httpClient=clientBuilder.build();
     }
     public OKHttp3() {
@@ -374,23 +380,25 @@ public class OKHttp3 implements IRequest {
     }
 
 
-
-
     private void initRequestBuild(String tag, RequestItem item, Request.Builder requestBuilder) {
-        StringBuilder headerBuilder=new StringBuilder();
-        //add custom header items
-        if(null!=item.headers&&!item.headers.isEmpty()){
-            for(Map.Entry<String,String> entry:item.headers.entrySet()){
-                headerBuilder.append(entry.getKey()+"="+ entry.getValue()+";");
-                requestBuilder.addHeader(entry.getKey(),entry.getValue());
-            }
-        }
+        StringBuilder headerBuilder = new StringBuilder();
+        HashMap<String, String> headers = new HashMap<>();
         //add global header items
         if(null!=requestConfig&&null!=requestConfig.listener){
             HashMap<String, String> headerItems = requestConfig.listener.requestHeaderItems();
-            if(null!=headerItems){
-                item.headers.putAll(headerItems);
-                for(Map.Entry<String,String> entry:headerItems.entrySet()){
+            if(null!=headerItems && !headerItems.isEmpty()){
+                headers.putAll(headerItems);
+            }
+        }
+        //add custom header items
+        if(null!=item.headers&&!item.headers.isEmpty()){
+            headers.putAll(item.headers);
+        }
+
+        if(null!=headers&&!headers.isEmpty()){
+            for(Map.Entry<String,String> entry:headers.entrySet()){
+                //过滤掉Header值为空的情况
+                if(!TextUtils.isEmpty(entry.getValue())) {
                     headerBuilder.append(entry.getKey() + "=" + entry.getValue() + ";");
                     requestBuilder.addHeader(entry.getKey(), entry.getValue());
                 }

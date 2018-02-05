@@ -3,6 +3,7 @@ package xyqb.net;
 import java.io.File;
 
 import xyqb.net.callback.OnApplyRequestItemListener;
+import xyqb.net.callback.OnClientCreateCallback;
 import xyqb.net.callback.OnPrintHttpLogListener;
 import xyqb.net.callback.OnRequestListener;
 import xyqb.net.callback.OnRequestResultListener;
@@ -85,6 +86,11 @@ public class NetManager {
 
     public NetManager setOnRequestResultListener(OnRequestResultListener requestResultListener){
         this.requestConfig.requestResultListener=requestResultListener;
+        return this;
+    }
+
+    public NetManager setOnClientCreateCallback(OnClientCreateCallback clientCreateCallback){
+        this.requestConfig.clientCreateCallback=clientCreateCallback;
         return this;
     }
 
