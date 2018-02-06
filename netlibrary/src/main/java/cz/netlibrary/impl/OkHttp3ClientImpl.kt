@@ -206,7 +206,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
         //添加配置header,如果重复,并使其覆盖掉全局
         headers.putAll(item.header)
         //遍历并添加所有Header
-        headers.forEach {
+        headers.filterValues { !TextUtils.isEmpty(it) }.forEach {
             headerBuilder.append(it.key + "=" + it.value + ";")
             requestBuilder.addHeader(it.key, it.value)
         }
