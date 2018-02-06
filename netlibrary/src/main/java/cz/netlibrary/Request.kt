@@ -76,6 +76,11 @@ fun<T> getRequestItem(action:String?,request: RequestBuilder<T>.()->Unit): Reque
         //附加参数,并过滤掉值为空的参数
         requestBuilder.ext?.let { config.params.putAll(it.filterValues { null!=it }) }
     }
+    //添加配置header
+    val headers=requestBuilder.headers
+    if(null!=headers){
+        config.header.putAll(headers)
+    }
     HttpLog.log{
         append("请求信息:${String.format(config.url,config.pathValue)}-----------------\n")
         append("\turl:${config.url}\n")

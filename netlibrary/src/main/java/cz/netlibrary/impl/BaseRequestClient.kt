@@ -10,6 +10,8 @@ import okhttp3.Interceptor
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.SSLSession
 
 /**
  * Created by cz on 2017/6/7.
@@ -32,6 +34,8 @@ abstract class BaseRequestClient<out T,C> {
                     .writeTimeout(requestConfig.writeTimeout.toLong(), TimeUnit.SECONDS)
                     .retryOnConnectionFailure(requestConfig.retryOnConnectionFailure)
                     .addNetworkInterceptor(interceptor)
+            //添加自定义一些配置
+            requestConfig.clientCreateCallback?.invoke(clientBuilder)
             //添加额外的拦截器
             requestConfig.interceptItems?.forEach{clientBuilder.addInterceptor(it)}
             //配置缓存目录

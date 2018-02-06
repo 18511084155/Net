@@ -69,7 +69,11 @@ object RequestClient{
                         } catch (e:Exception){
                             executeOnThread {
                                 HttpLog.log { append("数据处理失败$result -> map:${handler.map}!\n") }
-                                callFailed(OPERATION_FAILED,e.message?:"数据处理失败!")
+                                if(e is HttpException){
+                                    callFailed(e.code,e.message?:"数据处理失败!")
+                                } else {
+                                    callFailed(OPERATION_FAILED,e.message?:"数据处理失败!")
+                                }
                             }
                             return@executeOnError
                         }

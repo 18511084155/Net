@@ -71,12 +71,13 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
             HttpLog.log { append("请求操作异常:${e.message}\n") }
             callFailed(callback,OPERATION_FAILED,errorMessage?:e.message,null)
         }
-        if(null!=tag&&null!=call){
-            callItems.getOrPut(tag){ mutableListOf() }.add(call)
-            HttpLog.log {
-                append("请求添加Tag:$tag\n")
-//                append("当前网络请求数:${callItems.flatMap { it.value }.count()}\n")
+        try{
+            if(null!=tag&&null!=call){
+                val items=callItems.getOrPut(tag){ mutableListOf() }
+                items.add(call)
+                HttpLog.log { append("请求添加Tag:$tag\n") }
             }
+        } catch (e:Exception){
         }
     }
 
@@ -176,7 +177,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
                 RequestMethod.put->requestBuilder.put(requestBody)
             }
         }
-        initRequestBuild(tag, item, requestBuilder)
+        initRequestBuilder(tag, item, requestBuilder)
         return requestBuilder.build()
     }
 
@@ -186,7 +187,7 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
     private fun getGetRequest(tag: String?,url:StringBuilder,item: RequestConfig):Request{
         url.append(item.params.map { it.key.to(it.value) }.joinToString("&") { "${it.first}=${it.second}"})
         val requestBuilder = Request.Builder().url(url.toString())
-        initRequestBuild(tag, item, requestBuilder)
+        initRequestBuilder(tag, item, requestBuilder)
         return requestBuilder.build()
     }
 
@@ -194,20 +195,24 @@ class OkHttp3ClientImpl : BaseRequestClient<Response,OkHttpClient>() {
     /**
      * 初始化requestBuilder对象,主要用于添加header 以及全局header
      */
-    private fun initRequestBuild(tag: String?, item: RequestConfig, requestBuilder: Request.Builder) {
+    private fun initRequestBuilder(tag: String?, item: RequestConfig, requestBuilder: Request.Builder) {
         val headerBuilder = StringBuilder()
-        //add custom header items
-        item.header.forEach {
+        val headers= mutableMapOf<String,String>()
+        //添加全局headers
+        val extHeaders=requestConfig.requestHeaderCallback?.invoke()
+        if(null!=extHeaders&&!extHeaders.isEmpty()){
+            headers.putAll(extHeaders)
+        }
+        //添加配置header,如果重复,并使其覆盖掉全局
+        headers.putAll(item.header)
+        //遍历并添加所有Header
+        headers.forEach {
             headerBuilder.append(it.key + "=" + it.value + ";")
             requestBuilder.addHeader(it.key, it.value)
         }
-        requestConfig.requestHeaderCallback?.invoke()?.let {
-            it.forEach {
-                headerBuilder.append(it.key + "=" + it.value + ";")
-                requestBuilder.addHeader(it.key, it.value)
-            }
+        if(null!=tag){
+            requestBuilder.tag(tag)
         }
-        tag?.let { requestBuilder.tag(it) }
     }
 
 

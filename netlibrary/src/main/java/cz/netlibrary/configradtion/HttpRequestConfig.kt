@@ -3,6 +3,7 @@ package cz.netlibrary.configradtion
 import cz.netlibrary.exception.HttpException
 import cz.netlibrary.model.RequestConfig
 import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import java.io.File
 
 /**
@@ -20,11 +21,15 @@ class HttpRequestConfig {
     var maxCacheSize: Long = 10*1024*1024 //最大缓存信息
     var retryOnConnectionFailure=false //异常重试
     var interceptItems:Array<Interceptor>?=null//额外的拦截器
+    internal var clientCreateCallback:((OkHttpClient.Builder)->Unit)?=null
     internal var requestExtrasCallback:(()->MutableMap<String,String>)?=null //附加参数
     internal var requestHeaderCallback:(()->MutableMap<String,String>)?=null //附加头信息
     internal var requestErrorCallback:((Int,String?,String?)->HttpException)?=null
     internal var networkInterceptor:(RequestConfig.()->Boolean)?=null
 
+    fun clientCreateCallback(callback:(OkHttpClient.Builder)->Unit){
+        this.clientCreateCallback=callback
+    }
     fun requestExtrasCallback(callback:()->MutableMap<String,String>){
         this.requestExtrasCallback =callback
     }

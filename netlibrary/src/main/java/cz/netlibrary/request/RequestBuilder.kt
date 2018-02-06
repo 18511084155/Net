@@ -30,6 +30,7 @@ class RequestBuilder<T>{
     var failedItem:RequestFailCallback?=null
         set(value) { handler.failedCallback=value }
 
+    var headers:HashMap<String,String>?=null
     //模板请求参数
     var params= arrayOf<Any?>()
     //附加参数集
